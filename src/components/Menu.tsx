@@ -2,6 +2,7 @@ import { Check, ExternalLink, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { addons, daiquiriSizes, flavorColors, menuItems, type Flavor, type MenuCategory, type MenuItem } from '../data/menu';
 import { specForItem } from '../data/drinks';
+import { priceFor, useLivePrices, type LivePrice } from '../lib/livePrices';
 import { site, toast } from '../data/site';
 import { RealCup } from './RealCup';
 
@@ -9,8 +10,9 @@ const tabs: { id: MenuCategory; label: string }[] = [
   { id: 'signatures', label: 'Signatures' }, { id: 'classics', label: 'Classics' }, { id: 'cocktails', label: 'Cocktails' }, { id: 'extras', label: 'Party favors & extras' },
 ];
 
-function DrinkCard({ item }: { item: MenuItem }) {
+function DrinkCard({ item, live }: { item: MenuItem; live: Record<string, LivePrice> | null }) {
   const fanFavorite = site.fanFavorites.includes(item.name);
+  const price = priceFor(item, live);
   return (
     <article className="drink-card" data-cup-trigger>
       <RealCup spec={specForItem(item)} label={item.flavors?.length ? `${item.name}: ${item.flavors.join(', ')}` : item.name} className="drink-art" />
@@ -18,7 +20,7 @@ function DrinkCard({ item }: { item: MenuItem }) {
         <div className="drink-title"><h3>{item.name}</h3>{fanFavorite && <span className="favorite-badge">Fan favorite</span>}</div>
         {item.flavors?.length ? <div className="flavor-list">{item.flavors.map((flavor) => <span key={flavor} style={{ '--flavor': flavorColors[flavor] } as CSSProperties}>{flavor}</span>)}</div> : <p className="drink-description">{item.description || 'Available through Toast ordering.'}</p>}
         {item.flavors?.length && item.description && <p className="drink-description">{item.description}</p>}
-        <div className="drink-footer"><span>{item.price}{item.alcoholic ? <small> · 21+</small> : null}</span><a href={toast.itemUrl(item.itemPath)} target="_blank" rel="noreferrer">Order <ExternalLink size={15} /></a></div>
+        <div className="drink-footer"><span><strong className="drink-price" title={price.detail}>{price.label}</strong>{item.alcoholic ? <small> · 21+</small> : null}</span><a href={toast.itemUrl(item.itemPath)} target="_blank" rel="noreferrer">Order <ExternalLink size={15} /></a></div>
       </div>
     </article>
   );
@@ -27,6 +29,7 @@ function DrinkCard({ item }: { item: MenuItem }) {
 export function Menu() {
   const [tab, setTab] = useState<MenuCategory>('signatures');
   const [selected, setSelected] = useState<Flavor[]>([]);
+  const live = useLivePrices();
   const shownItems = useMemo(() => menuItems.filter((item) => item.category === tab && selected.every((flavor) => item.flavors?.includes(flavor))), [selected, tab]);
   const toggleFlavor = (flavor: Flavor) => setSelected((current) => current.includes(flavor) ? current.filter((item) => item !== flavor) : [...current, flavor]);
 
@@ -48,7 +51,7 @@ export function Menu() {
           </div>
           {(tab === 'signatures' || tab === 'classics') && <div className="flavor-filter"><span><SlidersHorizontal size={16} /> Filter by every flavor:</span>{(Object.keys(flavorColors) as Flavor[]).map((flavor) => <button key={flavor} className={selected.includes(flavor) ? 'selected' : ''} aria-pressed={selected.includes(flavor)} onClick={() => toggleFlavor(flavor)}><i style={{ backgroundColor: flavorColors[flavor] }} />{flavor}</button>)}{selected.length > 0 && <button className="clear-filter" onClick={() => setSelected([])}><X size={14} /> Clear</button>}</div>}
         </div>
-        {shownItems.length ? <div className="drink-grid">{shownItems.map((item) => <DrinkCard item={item} key={item.itemPath} />)}</div> : <div className="empty-menu"><Check size={22} /> No drink has every selected flavor. Try clearing one.</div>}
+        {shownItems.length ? <div className="drink-grid">{shownItems.map((item) => <DrinkCard item={item} live={live} key={item.itemPath} />)}</div> : <div className="empty-menu"><Check size={22} /> No drink has every selected flavor. Try clearing one.</div>}
       </div>
     </section>
   );

@@ -3,12 +3,13 @@ import type { CupControls } from '../cups/engine';
 import { specKey, type DrinkSpec } from '../cups/types';
 
 /**
- * A 3D drink in a clear PET cup that spins in place while its card is hovered,
- * focused or tapped. The three.js engine is loaded on demand and shared by every
- * cup on the page. Falls back to a flat silhouette if WebGL is unavailable.
+ * A 3D drink in a clear PET cup that spins in place while its card is hovered or
+ * focused. Touch screens have no hover, so there each cup spins while it is mostly
+ * on screen. The three.js engine is loaded on demand and shared by every cup on the
+ * page. Falls back to a flat silhouette if WebGL is unavailable.
  *
- * The interaction target is the nearest ancestor marked `data-cup-trigger`
- * (a whole menu card, say), or the cup itself.
+ * The hover target is the nearest ancestor marked `data-cup-trigger` (a whole menu
+ * card, say), or the cup itself.
  */
 export function RealCup({ spec, label, className = '' }: { spec: DrinkSpec; label: string; className?: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -25,8 +26,8 @@ export function RealCup({ spec, label, className = '' }: { spec: DrinkSpec; labe
     let cancelled = false;
     let hovered = false;
     let focused = false;
-    let selected = false;
-    const sync = () => controls?.setActive(hovered || focused || selected);
+    let inView = false;
+    const sync = () => controls?.setActive(hovered || focused || inView);
 
     const enter = (e: PointerEvent) => { if (e.pointerType !== 'touch') { hovered = true; sync(); } };
     const leave = (e: PointerEvent) => { if (e.pointerType !== 'touch') { hovered = false; sync(); } };
@@ -34,17 +35,15 @@ export function RealCup({ spec, label, className = '' }: { spec: DrinkSpec; labe
     const focusOut = (e: FocusEvent) => {
       if (!trigger.contains(e.relatedTarget as Node | null)) { focused = false; sync(); }
     };
-    // Touch has no hover: a tap on the card (not on its links or buttons) toggles the spin.
-    const tap = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch' || (e.target as Element).closest('a, button')) return;
-      selected = !selected;
-      sync();
-    };
     trigger.addEventListener('pointerenter', enter);
     trigger.addEventListener('pointerleave', leave);
     trigger.addEventListener('focusin', focusIn);
     trigger.addEventListener('focusout', focusOut);
-    trigger.addEventListener('pointerup', tap);
+    // Phones and tablets: spin while the cup is at least 60% on screen.
+    const io = window.matchMedia('(hover: none)').matches
+      ? new IntersectionObserver(([entry]) => { inView = entry.intersectionRatio >= 0.6; sync(); }, { threshold: [0, 0.6, 1] })
+      : null;
+    io?.observe(wrap);
 
     import('../cups/engine')
       .then(({ mountCup }) => {
@@ -61,7 +60,7 @@ export function RealCup({ spec, label, className = '' }: { spec: DrinkSpec; labe
       trigger.removeEventListener('pointerleave', leave);
       trigger.removeEventListener('focusin', focusIn);
       trigger.removeEventListener('focusout', focusOut);
-      trigger.removeEventListener('pointerup', tap);
+      io?.disconnect();
     };
   }, [key]);
 
