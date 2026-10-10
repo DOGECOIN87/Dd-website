@@ -12,7 +12,7 @@ function LocationVisit({ location }: { location: Location }) {
       <div className="visit-map"><iframe title={`Map to ${location.name}`} src={mapEmbedUrl(location)} loading="lazy" referrerPolicy="no-referrer-when-downgrade" /></div>
       <div className="visit-copy"><p className="eyebrow">{location.area}</p><h3>{location.name}</h3><address><MapPinned size={17} /> {fullAddress(location)}</address><a className="visit-phone" href={location.phoneHref}><Phone size={16} /> {location.phone}</a>
         <div className="hours-block"><div><Clock3 size={17} /> <strong>{isDepot ? 'Hours' : 'Before you head over'}</strong></div>{location.hours ? <table><tbody>{location.hours.map((hours, index) => <tr className={index === currentDay ? 'today' : ''} key={days[index]}><th>{days[index]}</th><td>{hours ? `${timeLabel(hours.open)} – ${timeLabel(hours.close)}` : 'Not published'}</td></tr>)}</tbody></table> : <p>{location.hoursNote}</p>}{location.hoursNote && location.hours && <small>{location.hoursNote}</small>}</div>
-        <a className={isDepot ? 'button button-coral' : 'button button-yard'} href={directionsUrl(location)} target="_blank" rel="noreferrer">Get directions ↗</a>
+        <a className={isDepot ? 'button button-pink' : 'button button-yard'} href={directionsUrl(location)} target="_blank" rel="noreferrer">Get directions ↗</a>
       </div>
     </article>
   );

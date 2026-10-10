@@ -1,97 +1,35 @@
-import { Check, Compass, MapPin, Navigation, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useEffect, useState } from 'react';
-import { directionsUrl, locations, type Location, type LocationId } from '../data/locations';
-import { distanceToLocations } from '../lib/geo';
-import { openStatus } from '../lib/hours';
-
-function useNow() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return now;
-}
-
-function LocationCard({ location, distance, closest, now }: { location: Location; distance?: number; closest: boolean; now: Date }) {
-  const status = openStatus(location, now);
-  const isDepot = location.id === 'fm306';
-  const facebook = location.links.find((link) => link.label === 'Facebook')?.href;
-  return (
-    <motion.article className={`location-card ${location.theme}`} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-      <div className="location-art" aria-hidden="true">
-        {isDepot ? <img src="/photos/layered-daiquiris.webp" alt="" /> : <img src="/brand/backyard-in-gruene.webp" alt="" />}
-      </div>
-      <div className="location-copy">
-        <div className="card-topline">
-          <span className={`status-pill ${status.kind}`}>{status.label}</span>
-          {closest && <span className="nearest-pill"><Navigation size={14} /> Closest to you</span>}
-        </div>
-        <p className="eyebrow">{location.area}</p>
-        <h2>{location.name}</h2>
-        <p className="location-tagline">{location.tagline}</p>
-        <div className="chips" aria-label={`${location.nickname} highlights`}>
-          {location.features.slice(0, 4).map((feature) => <span className="chip" key={feature}>{feature}</span>)}
-        </div>
-        <p className="best-for"><Sparkles size={16} /> <strong>Best for:</strong> {location.bestFor}</p>
-        {distance !== undefined && <p className="distance"><Compass size={16} /> {distance.toFixed(1)} miles away as the crow flies</p>}
-        <div className="card-actions">
-          {isDepot ? <a className="button button-light" href={location.orderUrl} target="_blank" rel="noreferrer">Order ahead ↗</a> : <a className="button button-yard-light" href={directionsUrl(location)} target="_blank" rel="noreferrer"><MapPin size={17} /> Directions</a>}
-          {isDepot ? <a className="text-link" href={directionsUrl(location)} target="_blank" rel="noreferrer">Directions <span>→</span></a> : <a className="text-link" href={facebook} target="_blank" rel="noreferrer">What’s on <span>→</span></a>}
-        </div>
-      </div>
-    </motion.article>
-  );
-}
+import { lineup } from '../data/drinks';
+import { toast } from '../data/site';
+import { RealCup } from './RealCup';
 
 export function Hero() {
-  const now = useNow();
-  const [distances, setDistances] = useState<Partial<Record<LocationId, number>>>({});
-  const [geoMessage, setGeoMessage] = useState('');
-  const [locating, setLocating] = useState(false);
-  const closest = Object.entries(distances).length === 2
-    ? (distances.fm306! <= distances.gruene! ? 'fm306' : 'gruene')
-    : undefined;
-
-  const findClosest = () => {
-    if (!navigator.geolocation) {
-      setGeoMessage('Your browser does not offer location sharing. Use the directions links instead.');
-      return;
-    }
-    setLocating(true);
-    setGeoMessage('');
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setDistances(distanceToLocations(position.coords, locations));
-        setLocating(false);
-      },
-      () => {
-        setLocating(false);
-        setGeoMessage('We could not access your location. You can still choose a spot or use directions.');
-      },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
-    );
-  };
-
   return (
-    <section id="locations" className="hero-section" aria-labelledby="hero-heading">
-      <div id="top" className="hero-orb orb-one" />
-      <div className="hero-orb orb-two" />
+    <section id="top" className="hero-section" aria-labelledby="hero-heading">
+      <div className="hero-glow" aria-hidden="true" />
       <div className="shell hero-inner">
-        <div className="hero-intro">
-          <p className="eyebrow">New Braunfels · two ways to sip</p>
-          <h1 id="hero-heading">Where are we <em>sipping</em> today?</h1>
-          <p>Frozen daiquiris, zero-proof sips, and a place that fits the day. Start with the vibe you’re after.</p>
-        </div>
-        <div className="location-grid">
-          {locations.map((location) => <LocationCard key={location.id} location={location} now={now} distance={distances[location.id]} closest={closest === location.id} />)}
-        </div>
-        <div className="hero-tools">
-          <a href="#choose" className="quiz-prompt"><Check size={18} /> Not sure? Take the 3-question quiz <span>↓</span></a>
-          <button className="closest-button" onClick={findClosest} disabled={locating}><Navigation size={18} /> {locating ? 'Finding you…' : 'Which is closer to me?'}</button>
-        </div>
-        {geoMessage && <p className="geo-message" role="status">{geoMessage}</p>}
+        <motion.div className="hero-intro" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <p className="eyebrow">Sip Society + Daiquiri Depot · New Braunfels</p>
+          <h1 id="hero-heading">Everything <em>sip.</em><br />All in one stop.</h1>
+          <p>Frozen daiquiris, gourmet coffee, boba, dirty sodas and smoothies. Now pouring at two New Braunfels spots, including our new Backyard in Gruene.</p>
+          <div className="hero-actions">
+            <a className="button button-pink" href={toast.orderUrl} target="_blank" rel="noreferrer">Order pickup <ArrowUpRight size={18} /></a>
+            <a className="button button-ghost" href="#locations">See both locations <ArrowDown size={18} /></a>
+          </div>
+        </motion.div>
+        <ul className="lineup" aria-label="What we pour">
+          {lineup.map((drink) => (
+            <li className="lineup-item" key={drink.name}>
+              <RealCup spec={drink.spec} label={`${drink.name} in a clear Sip Society cup`} className="lineup-cup" />
+              <div className="lineup-label">
+                <h2>{drink.name}</h2>
+                <p>{drink.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="lineup-tagline">Good drinks · Good vibes · Great society</p>
       </div>
     </section>
   );

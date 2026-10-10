@@ -58,14 +58,14 @@ export function Quiz() {
               <p className="result-lead">{resultLocation.bestFor}</p>
               <ul>{reasons[resultLocation.id].map((reason) => <li key={reason}>{reason}</li>)}</ul>
               <div className="result-actions">
-                {resultLocation.id === 'fm306' ? <a className="button button-coral" href={toast.orderUrl} target="_blank" rel="noreferrer">Order ahead ↗</a> : <a className="button button-yard" href={directionsUrl(resultLocation)} target="_blank" rel="noreferrer">Get directions ↗</a>}
+                {resultLocation.id === 'fm306' ? <a className="button button-pink" href={toast.orderUrl} target="_blank" rel="noreferrer">Order ahead ↗</a> : <a className="button button-yard" href={directionsUrl(resultLocation)} target="_blank" rel="noreferrer">Get directions ↗</a>}
                 <a className="text-link" href="#visit">See visit details <span>→</span></a>
               </div>
             </> : <>
               <p className="eyebrow">It’s a tie</p>
               <h3>Choose the kind of hang you want.</h3>
               <p className="result-lead">The Depot is set up for drive-thru and ordering ahead; The Backyard is the stay-a-while Gruene option.</p>
-              <div className="result-actions"><a className="button button-coral" href="#locations">Compare locations</a></div>
+              <div className="result-actions"><a className="button button-pink" href="#locations">Compare locations</a></div>
             </>}
             <button className="restart-button" onClick={restart}><RotateCcw size={16} /> Start over</button>
           </div>

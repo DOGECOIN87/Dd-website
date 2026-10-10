@@ -26,6 +26,8 @@ export interface Location {
   orderUrl?: string;
   links: { label: string; href: string }[];
   theme: 'sip' | 'yard';
+  /** Flags a recently opened location with a "New location" badge. */
+  isNew?: boolean;
 }
 
 const hours = (open: string, close: string): DayHours => ({ open, close });
@@ -79,6 +81,7 @@ export const locations: Location[] = [
     serves: ['Frozen daiquiris', 'Beer', 'Wine', 'Dirty sodas', 'Small bites & treats'],
     links: [{ label: 'Facebook', href: 'https://www.facebook.com/p/The-Backyard-in-Gruene-61581658604585/' }],
     theme: 'yard',
+    isNew: true,
   },
 ];
 

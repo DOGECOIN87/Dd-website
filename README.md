@@ -19,6 +19,15 @@ The local site runs at `http://localhost:3000`. Use `npm run lint` for a TypeScr
 
 Toast ordering deliberately opens on Toast rather than inside the site: Toast blocks framing with `X-Frame-Options`. It currently supports FM 306 only.
 
+## 3D cups
+
+Every drink on the site is a live, slowly spinning 3D model rendered with three.js (`src/cups/`), not an image:
+
+- `geometry.ts` builds the clear PET cup (push-up base, stacking foot, tapered wall, rolled rim), dome and flat lids, the drink volume, whipped cream and garnishes.
+- `textures.ts` paints the drink colours (layers, swirls, drizzle, pearls), the condensation normal map and the printed cup logo at runtime.
+- `engine.ts` uses one shared WebGL renderer for the whole page and copies each cup into its own canvas, so dozens of cups can spin at once. Only on-screen cups render, at up to 30 fps. Visitors with reduced motion enabled get a still cup.
+- `src/data/drinks.ts` maps the hero lineup and each menu item to a cup. Menu flavours drive the colours automatically.
+
 ## Assets
 
-Business-provided brand assets and photos are in `public/brand` and `public/photos`. Replace these with full-resolution originals when they are available, retaining the same filenames or updating their references in the components and `index.html`.
+Business-provided brand assets, photos and videos are in `public/brand`, `public/photos` and `public/video`. Videos were re-encoded for the web (H.264, faststart) with WebP poster frames. Replace these with full-resolution originals when they are available, retaining the same filenames or updating their references in the components and `index.html`.
