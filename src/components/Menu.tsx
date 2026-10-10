@@ -1,112 +1,70 @@
-import { motion } from 'motion/react';
+import { Check, ExternalLink, SlidersHorizontal, X } from 'lucide-react';
+import { useId, useMemo, useState, type CSSProperties } from 'react';
+import { addons, daiquiriSizes, flavorColors, menuItems, type Flavor, type MenuCategory, type MenuItem } from '../data/menu';
+import { site, toast } from '../data/site';
 
-const originals = [
-  "Margarita", "Octane", "Strawberry", "Hypnotic", "Pina Colada", "Hurricane", "Peach", "Flavor of the Week"
+const tabs: { id: MenuCategory; label: string }[] = [
+  { id: 'signatures', label: 'Signatures' }, { id: 'classics', label: 'Classics' }, { id: 'cocktails', label: 'Cocktails' }, { id: 'extras', label: 'Party favors & extras' },
 ];
 
-const signatures = [
-  { name: "Texas Twist", ingredients: "Strawberry, Margarita" },
-  { name: "Gruene Rapids", ingredients: "Hypnotic, Octane" },
-  { name: "Sweet Magnolia", ingredients: "Pina Colada, Peach" },
-  { name: "Cactus Juice", ingredients: "Margarita, Peach" },
-  { name: "Superman", ingredients: "Hypnotic, Hurricane" },
-  { name: "Dreamsicle", ingredients: "Pina Colada, Octane" },
-  { name: "Miami Vice", ingredients: "Strawberry, Pina Colada" },
-  { name: "Cyclone", ingredients: "Hurricane, Octane" },
-  { name: "Lazy River", ingredients: "Pina Colada, Hypnotic" },
-  { name: "All American", ingredients: "Strawberry, Pina Colada, Hypnotic" },
-  { name: "New Braunfels Sunset", ingredients: "Peach, Octane, Strawberry" },
-  { name: "Southern Classic", ingredients: "Hurricane, Octane, Margarita" },
-  { name: "River Road", ingredients: "Strawberry, Hypnotic, Peach" },
-  { name: "The Titan", ingredients: "Hypnotic, Hurricane, Octane" },
-  { name: "Perfect Storm", ingredients: "Hurricane, Peach, Strawberry" }
-];
+function LayeredCup({ flavors = [] }: { flavors?: Flavor[] }) {
+  const clipId = useId().replaceAll(':', '');
+  const colors = flavors.length ? flavors.map((flavor) => flavorColors[flavor]) : ['#CF6F56', '#5A9397', '#C9A75A'];
+  const height = 66 / colors.length;
+  return (
+    <svg className="layered-cup" viewBox="0 0 110 112" role="img" aria-label={flavors.length ? `${flavors.join(', ')} layered daiquiri` : 'Frozen drink'}>
+      <path d="M25 17h60l-7 80c-.5 6-5.4 10-11.5 10h-13c-6.1 0-11-4-11.5-10L25 17Z" fill="#FBF5EC" stroke="#22303D" strokeWidth="3" />
+      <clipPath id={clipId}><path d="M29 22h52l-6.4 73c-.3 4-3.7 7-7.8 7H54c-4.1 0-7.5-3-7.8-7L29 22Z" /></clipPath>
+      <g clipPath={`url(#${clipId})`}>
+        {colors.map((color, index) => <path key={color} d={`M20 ${25 + index * height} Q45 ${18 + index * height} 60 ${25 + index * height} T95 ${25 + index * height}V${27 + (index + 1) * height}H20Z`} fill={color} />)}
+      </g>
+      <path d="M25 17h60l-7 80c-.5 6-5.4 10-11.5 10h-13c-6.1 0-11-4-11.5-10L25 17Z" fill="none" stroke="#22303D" strokeWidth="3" />
+      <path d="m59 18 11-14" stroke="#22303D" strokeWidth="3" strokeLinecap="round" />
+      <path d="M25 17h60" stroke="#22303D" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DrinkCard({ item }: { item: MenuItem }) {
+  const fanFavorite = site.fanFavorites.includes(item.name);
+  return (
+    <article className="drink-card">
+      <div className="drink-art"><LayeredCup flavors={item.flavors} /></div>
+      <div className="drink-copy">
+        <div className="drink-title"><h3>{item.name}</h3>{fanFavorite && <span className="favorite-badge">Fan favorite</span>}</div>
+        {item.flavors?.length ? <div className="flavor-list">{item.flavors.map((flavor) => <span key={flavor} style={{ '--flavor': flavorColors[flavor] } as CSSProperties}>{flavor}</span>)}</div> : <p className="drink-description">{item.description || 'Available through Toast ordering.'}</p>}
+        {item.flavors?.length && item.description && <p className="drink-description">{item.description}</p>}
+        <div className="drink-footer"><span>{item.price}{item.alcoholic ? <small> · 21+</small> : null}</span><a href={toast.itemUrl(item.itemPath)} target="_blank" rel="noreferrer">Order <ExternalLink size={15} /></a></div>
+      </div>
+    </article>
+  );
+}
 
 export function Menu() {
+  const [tab, setTab] = useState<MenuCategory>('signatures');
+  const [selected, setSelected] = useState<Flavor[]>([]);
+  const shownItems = useMemo(() => menuItems.filter((item) => item.category === tab && selected.every((flavor) => item.flavors?.includes(flavor))), [selected, tab]);
+  const toggleFlavor = (flavor: Flavor) => setSelected((current) => current.includes(flavor) ? current.filter((item) => item !== flavor) : [...current, flavor]);
+
   return (
-    <section id="menu" className="py-20 bg-brand-light">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-base text-brand-red font-bold tracking-wide uppercase">Frozen 2 Go</h2>
-          <p className="mt-2 text-4xl leading-8 font-display tracking-tight text-brand-blue sm:text-5xl uppercase">
-            Signature Drinks
-          </p>
-          <p className="mt-4 max-w-2xl text-xl text-gray-600 mx-auto">
-            Mix and match or try one of our famous combinations.
-          </p>
+    <section id="menu" className="menu-section section-pad" aria-labelledby="menu-heading">
+      <div className="shell">
+        <div className="section-heading menu-heading">
+          <div><p className="eyebrow">Daiquiri Depot menu · FM 306</p><h2 id="menu-heading">Build a better frozen drink.</h2></div>
+          <p>This is the full FM 306 menu. The Backyard pours a selection. Alcoholic drinks are 21+.</p>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Originals Column */}
-          <div className="bg-white rounded-3xl p-8 shadow-xl border-t-8 border-brand-red">
-            <h3 className="text-3xl font-display text-brand-red mb-6 uppercase text-center">Originals</h3>
-            <ul className="space-y-4">
-              {originals.map((drink, idx) => (
-                <li key={idx} className="flex items-center text-lg font-semibold text-brand-blue">
-                  <span className="w-2 h-2 bg-brand-yellow rounded-full mr-3"></span>
-                  {drink}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8 p-4 bg-brand-orange/20 rounded-xl text-center border-2 border-brand-orange border-dashed">
-              <p className="font-bold text-brand-red text-xl">Add a Shot To Any Drink $1</p>
-            </div>
-          </div>
-
-          {/* Signatures Column (Takes up 2 columns on large screens) */}
-          <div className="lg:col-span-2 bg-brand-blue rounded-3xl p-8 shadow-xl text-brand-light">
-            <h3 className="text-3xl font-display text-brand-yellow mb-8 uppercase text-center">Signature Combinations</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              {signatures.map((drink, idx) => (
-                <div key={idx} className="border-b border-blue-800 pb-3">
-                  <h4 className="text-xl font-bold text-white mb-1">{drink.name}</h4>
-                  <p className="text-sm text-gray-300 italic">{drink.ingredients}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="size-strip" aria-label="Daiquiri sizes and prices">
+          <p><strong>Pick your size</strong> <span>Mix, match, and make it yours.</span></p>
+          <div>{daiquiriSizes.map(([size, price]) => <span key={size}><b>{size}</b> {price}</span>)}</div>
         </div>
-
-        {/* Pricing & Sizes */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white rounded-2xl p-6 shadow-md text-center border-2 border-brand-blue">
-            <h4 className="text-2xl font-display text-brand-blue uppercase mb-4">Pick A Size</h4>
-            <div className="flex justify-center items-end space-x-4 text-brand-blue font-bold">
-              <div className="flex flex-col items-center"><div className="w-6 h-8 bg-white rounded-b-lg border-2 border-brand-blue mb-2 relative"><div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-brand-red rounded-full -mt-1"></div></div>16 oz</div>
-              <div className="flex flex-col items-center"><div className="w-8 h-10 bg-white rounded-b-lg border-2 border-brand-blue mb-2 relative"><div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1 bg-brand-red rounded-full -mt-1"></div></div>24 oz</div>
-              <div className="flex flex-col items-center"><div className="w-10 h-12 bg-white rounded-b-lg border-2 border-brand-blue mb-2 relative"><div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-brand-red rounded-full -mt-1"></div></div>32 oz</div>
-              <div className="flex flex-col items-center"><div className="w-12 h-16 bg-white rounded-b-lg border-2 border-brand-blue mb-2 relative"><div className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-brand-red rounded-full -mt-1"></div></div>1/2 Gal</div>
-              <div className="flex flex-col items-center"><div className="w-16 h-20 bg-white rounded-b-lg border-2 border-brand-blue mb-2 relative"><div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-1 bg-brand-red rounded-full -mt-1"></div></div>Gallon</div>
-            </div>
+        <div className="addon-strip"><strong>Add-ons</strong>{addons.map(([name, price]) => <span key={name}>{name} <b>{price}</b></span>)}</div>
+        <div className="menu-controls">
+          <div className="tabs" role="tablist" aria-label="Menu categories">
+            {tabs.map((item) => <button role="tab" aria-selected={tab === item.id} className={tab === item.id ? 'active' : ''} onClick={() => setTab(item.id)} key={item.id}>{item.label}</button>)}
           </div>
-
-          <div className="bg-brand-red rounded-2xl p-6 shadow-md text-center text-white">
-            <h4 className="text-2xl font-display uppercase mb-4">River Jugs</h4>
-            <div className="space-y-2 text-xl font-bold">
-              <p>32 oz - $16</p>
-              <p>1/2 Gallon - $27</p>
-            </div>
-            <p className="mt-4 text-sm uppercase tracking-wider font-semibold bg-white text-brand-red inline-block px-3 py-1 rounded-full">Approved!</p>
-          </div>
-
-          <div className="bg-brand-yellow rounded-2xl p-6 shadow-md text-center text-brand-blue">
-            <h4 className="text-2xl font-display uppercase mb-4">Extras & More</h4>
-            <ul className="space-y-2 font-bold text-lg">
-              <li className="flex justify-between border-b border-yellow-500 pb-1"><span>Jell-O Shot</span><span>$2</span></li>
-              <li className="flex justify-between border-b border-yellow-500 pb-1 text-sm text-brand-red"><span>(3 for $5)</span><span></span></li>
-              <li className="flex justify-between border-b border-yellow-500 pb-1"><span>Tipsy Bears</span><span>$2</span></li>
-              <li className="flex justify-between border-b border-yellow-500 pb-1"><span>Bottled Water</span><span>$1</span></li>
-            </ul>
-            <div className="mt-4 flex justify-between items-center bg-white rounded-lg p-2">
-              <span className="font-bold">Beer (Coors, Bud, Miller)</span>
-              <span className="font-bold text-brand-red">$4</span>
-            </div>
-            <div className="mt-2 flex justify-between items-center bg-brand-orange text-white rounded-lg p-2">
-              <span className="font-bold">Kids Slushies (12oz)</span>
-              <span className="font-bold">$3</span>
-            </div>
-          </div>
+          {(tab === 'signatures' || tab === 'classics') && <div className="flavor-filter"><span><SlidersHorizontal size={16} /> Filter by every flavor:</span>{(Object.keys(flavorColors) as Flavor[]).map((flavor) => <button key={flavor} className={selected.includes(flavor) ? 'selected' : ''} aria-pressed={selected.includes(flavor)} onClick={() => toggleFlavor(flavor)}><i style={{ backgroundColor: flavorColors[flavor] }} />{flavor}</button>)}{selected.length > 0 && <button className="clear-filter" onClick={() => setSelected([])}><X size={14} /> Clear</button>}</div>}
         </div>
+        {shownItems.length ? <div className="drink-grid">{shownItems.map((item) => <DrinkCard item={item} key={item.itemPath} />)}</div> : <div className="empty-menu"><Check size={22} /> No drink has every selected flavor. Try clearing one.</div>}
       </div>
     </section>
   );

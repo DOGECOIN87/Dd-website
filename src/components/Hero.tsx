@@ -1,73 +1,98 @@
+import { Check, Compass, MapPin, Navigation, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useEffect, useState } from 'react';
+import { directionsUrl, locations, type Location, type LocationId } from '../data/locations';
+import { distanceToLocations } from '../lib/geo';
+import { openStatus } from '../lib/hours';
 
-export function Hero() {
+function useNow() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return now;
+}
+
+function LocationCard({ location, distance, closest, now }: { location: Location; distance?: number; closest: boolean; now: Date }) {
+  const status = openStatus(location, now);
+  const isDepot = location.id === 'fm306';
+  const facebook = location.links.find((link) => link.label === 'Facebook')?.href;
   return (
-    <div className="relative bg-brand-blue overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(#F4A261 2px, transparent 2px)', backgroundSize: '30px 30px' }}></div>
+    <motion.article className={`location-card ${location.theme}`} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+      <div className="location-art" aria-hidden="true">
+        {isDepot ? <img src="/photos/layered-daiquiris.webp" alt="" /> : <img src="/brand/backyard-in-gruene.webp" alt="" />}
       </div>
-      
-      <div className="max-w-7xl mx-auto">
-        <div className="relative z-10 pb-8 bg-brand-blue sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32 pt-20">
-          <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-            <div className="sm:text-center lg:text-left">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-8"
-              >
-                <img 
-                  src="/logo-banner.png" 
-                  alt="The Daiquiri Depot - Frozen 2 Go" 
-                  className="w-full max-w-xl mx-auto lg:mx-0 drop-shadow-xl"
-                />
-              </motion.div>
-              <motion.p 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="mt-3 text-base text-gray-300 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0"
-              >
-                Serving New Braunfels and surrounding areas. All of our products are made from real sugar cane, real fruit purée, and a vinous citrus neutral alcohol.
-              </motion.p>
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start"
-              >
-                <div className="rounded-md shadow">
-                  <a
-                    href="#menu"
-                    className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-full text-brand-blue bg-brand-yellow hover:bg-yellow-400 md:py-4 md:text-lg transition-transform hover:scale-105"
-                  >
-                    View Menu
-                  </a>
-                </div>
-                <div className="mt-3 sm:mt-0 sm:ml-3">
-                  <a
-                    href="tel:8306325888"
-                    className="w-full flex items-center justify-center px-8 py-3 border-2 border-brand-red text-base font-bold rounded-full text-brand-light hover:bg-brand-red md:py-4 md:text-lg transition-colors"
-                  >
-                    Call to Order
-                  </a>
-                </div>
-              </motion.div>
-            </div>
-          </main>
+      <div className="location-copy">
+        <div className="card-topline">
+          <span className={`status-pill ${status.kind}`}>{status.label}</span>
+          {closest && <span className="nearest-pill"><Navigation size={14} /> Closest to you</span>}
+        </div>
+        <p className="eyebrow">{location.area}</p>
+        <h2>{location.name}</h2>
+        <p className="location-tagline">{location.tagline}</p>
+        <div className="chips" aria-label={`${location.nickname} highlights`}>
+          {location.features.slice(0, 4).map((feature) => <span className="chip" key={feature}>{feature}</span>)}
+        </div>
+        <p className="best-for"><Sparkles size={16} /> <strong>Best for:</strong> {location.bestFor}</p>
+        {distance !== undefined && <p className="distance"><Compass size={16} /> {distance.toFixed(1)} miles away as the crow flies</p>}
+        <div className="card-actions">
+          {isDepot ? <a className="button button-light" href={location.orderUrl} target="_blank" rel="noreferrer">Order ahead ↗</a> : <a className="button button-yard-light" href={directionsUrl(location)} target="_blank" rel="noreferrer"><MapPin size={17} /> Directions</a>}
+          {isDepot ? <a className="text-link" href={directionsUrl(location)} target="_blank" rel="noreferrer">Directions <span>→</span></a> : <a className="text-link" href={facebook} target="_blank" rel="noreferrer">What’s on <span>→</span></a>}
         </div>
       </div>
-      <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
-        <img
-          className="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full"
-          src="https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
-          alt="Colorful frozen drinks"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-blue to-transparent lg:via-brand-blue/20"></div>
+    </motion.article>
+  );
+}
+
+export function Hero() {
+  const now = useNow();
+  const [distances, setDistances] = useState<Partial<Record<LocationId, number>>>({});
+  const [geoMessage, setGeoMessage] = useState('');
+  const [locating, setLocating] = useState(false);
+  const closest = Object.entries(distances).length === 2
+    ? (distances.fm306! <= distances.gruene! ? 'fm306' : 'gruene')
+    : undefined;
+
+  const findClosest = () => {
+    if (!navigator.geolocation) {
+      setGeoMessage('Your browser does not offer location sharing. Use the directions links instead.');
+      return;
+    }
+    setLocating(true);
+    setGeoMessage('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setDistances(distanceToLocations(position.coords, locations));
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        setGeoMessage('We could not access your location. You can still choose a spot or use directions.');
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  };
+
+  return (
+    <section id="locations" className="hero-section" aria-labelledby="hero-heading">
+      <div id="top" className="hero-orb orb-one" />
+      <div className="hero-orb orb-two" />
+      <div className="shell hero-inner">
+        <div className="hero-intro">
+          <p className="eyebrow">New Braunfels · two ways to sip</p>
+          <h1 id="hero-heading">Where are we <em>sipping</em> today?</h1>
+          <p>Frozen daiquiris, zero-proof sips, and a place that fits the day. Start with the vibe you’re after.</p>
+        </div>
+        <div className="location-grid">
+          {locations.map((location) => <LocationCard key={location.id} location={location} now={now} distance={distances[location.id]} closest={closest === location.id} />)}
+        </div>
+        <div className="hero-tools">
+          <a href="#choose" className="quiz-prompt"><Check size={18} /> Not sure? Take the 3-question quiz <span>↓</span></a>
+          <button className="closest-button" onClick={findClosest} disabled={locating}><Navigation size={18} /> {locating ? 'Finding you…' : 'Which is closer to me?'}</button>
+        </div>
+        {geoMessage && <p className="geo-message" role="status">{geoMessage}</p>}
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,3 +1,10 @@
-Please upload the logo images here:
-1. Save the square logo as `logo-square.png` in this folder.
-2. Save the banner logo as `logo-banner.png` in this folder.
+# Public assets
+
+These files are business-provided assets:
+
+- `brand/sip-society-daiquiri-depot.webp` — combined wordmark
+- `brand/backyard-in-gruene.webp` — Backyard badge
+- `photos/layered-daiquiris.webp` — FM 306 daiquiri photo
+- favicon and legacy monogram files
+
+Please replace the web-sized assets with full-resolution originals if they become available.
