@@ -1,0 +1,134 @@
+/* Spinning PET-cup artwork ported from the Daiquiri Depot preview.
+   Original: pure-CSS 3D-style cup (flat snap lid, faceted walls, liquid,
+   condensation, straw) with turntable spin animations.
+   Scoped as .dd-drink-art to avoid clashing with the repo's own .drink-art
+   wrapper styles. Liquid colors come from --c1/--c2/--c3 custom properties
+   set inline by the DrinkArt React component (see DrinkArt.tsx). */
+.hero-drinks .dd-drink-art:nth-child(1){width:135px;transform:rotate(-7deg) translate(20px,12px)}
+.hero-drinks .dd-drink-art:nth-child(2){z-index:2}
+.hero-drinks .dd-drink-art:nth-child(3){width:142px;transform:rotate(8deg) translate(-20px,15px)}
+.dd-drink-art{--c1:#efbd4e;--c2:#e96748;position:relative;width:86px;aspect-ratio:.64;margin:0 auto;filter:drop-shadow(0 12px 12px rgba(7,25,44,.2));transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.dd-drink-art .straw{position:absolute;z-index:1;width:9%;height:56%;left:57%;top:-25%;border-radius:999px 999px 0 0;transform:rotate(9deg);transform-origin:bottom;background:repeating-linear-gradient(135deg,#f7fbff 0 8px,#df3a40 8px 16px);box-shadow:inset -3px 0 2px rgba(0,0,0,.13),0 2px 4px rgba(0,0,0,.1)}
+.dd-drink-art .lid{position:absolute;z-index:4;left:-5%;right:-5%;top:4%;height:8%;border:2px solid rgba(255,255,255,.75);border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.52),rgba(255,255,255,.16));box-shadow:0 2px 3px rgba(10,34,55,.12)}
+.dd-drink-art .cup-body{position:absolute;inset:7% 4% 0;overflow:hidden;clip-path:polygon(0 0,100% 0,85% 100%,15% 100%);background:linear-gradient(90deg,rgba(255,255,255,.42),rgba(255,255,255,.05) 20%,rgba(255,255,255,.18) 75%,rgba(255,255,255,.46));border-radius:3% 3% 16% 16%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.56)}
+.dd-drink-art .frozen{position:absolute;inset:5% 5% 3%;clip-path:polygon(0 0,100% 0,84% 100%,16% 100%);background:radial-gradient(circle at 22% 15%,rgba(255,255,255,.8) 0 1.8%,transparent 2.4%),radial-gradient(circle at 68% 28%,rgba(255,255,255,.65) 0 1.4%,transparent 2%),radial-gradient(circle at 35% 54%,rgba(255,255,255,.6) 0 2%,transparent 2.6%),radial-gradient(circle at 72% 76%,rgba(255,255,255,.5) 0 1.6%,transparent 2.2%),repeating-radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.2) 0 2px,transparent 3px 8px),linear-gradient(145deg,var(--c1),var(--c2));border-radius:2% 2% 13% 13%;box-shadow:inset 12px 0 16px rgba(255,255,255,.18),inset -10px -12px 20px rgba(44,18,39,.12)}
+.dd-drink-art .cup-body:before{content:"";position:absolute;z-index:2;inset:0;background:linear-gradient(105deg,rgba(255,255,255,.56) 3%,rgba(255,255,255,.1) 14%,transparent 35%,rgba(255,255,255,.2) 87%,rgba(255,255,255,.48));clip-path:polygon(0 0,100% 0,85% 100%,15% 100%)}
+.dd-drink-art .cup-body:after{content:"";position:absolute;z-index:3;inset:10% 6%;background:radial-gradient(circle at 10% 18%,rgba(255,255,255,.78) 0 1.4%,transparent 1.8%),radial-gradient(circle at 91% 28%,rgba(255,255,255,.75) 0 1.1%,transparent 1.6%),radial-gradient(circle at 8% 61%,rgba(255,255,255,.72) 0 1.7%,transparent 2.1%),radial-gradient(circle at 88% 72%,rgba(255,255,255,.68) 0 1.3%,transparent 1.8%),radial-gradient(ellipse at 13% 38%,rgba(255,255,255,.65) 0 1.1%,transparent 1.7%);filter:drop-shadow(0 2px 1px rgba(15,40,60,.18))}
+.dd-drink-art .rim{position:absolute;z-index:5;left:6%;right:6%;bottom:-1%;height:5%;border:2px solid rgba(255,255,255,.62);border-radius:50%;background:rgba(255,255,255,.14)}
+.menu-card:hover .dd-drink-art{transform:translateY(-5px) rotate(-1deg)}
+.menu-card .dd-drink-art{width:64px}
+.more-card .dd-drink-art{position:absolute;width:82px;right:18px;bottom:18px}
+@media(max-width:600px){.hero-drinks .dd-drink-art{width:118px}.hero-drinks .dd-drink-art:nth-child(1){width:95px}.hero-drinks .dd-drink-art:nth-child(3){width:100px}.menu-card .dd-drink-art{width:55px}.more-card .dd-drink-art{width:72px}}
+@media(prefers-reduced-motion:reduce){.menu-card:hover .dd-drink-art{transform:none}}
+/* PET cup study — modeled in CSS from six clear disposable-cup silhouettes */
+    .dd-drink-art{--plastic:rgba(245,252,255,.7);--edge:rgba(223,239,247,.85);--shadow-ink:rgba(8,26,44,.22);aspect-ratio:.67;filter:drop-shadow(0 12px 10px rgba(7,25,44,.22)) drop-shadow(0 2px 1px rgba(255,255,255,.25))}
+.dd-drink-art:after{content:"";position:absolute;z-index:-1;left:13%;right:13%;bottom:-1%;height:5%;border-radius:50%;background:rgba(5,21,37,.28);filter:blur(5px)}
+.dd-drink-art .straw{z-index:2;left:58%;top:-23%;width:8%;height:59%;border:1px solid rgba(255,255,255,.5);background:repeating-linear-gradient(138deg,#fff 0 7px,#e43c45 7px 14px);box-shadow:inset -2px 0 2px rgba(40,54,68,.18),0 2px 4px rgba(3,16,28,.17)}
+.dd-drink-art .cup-body{inset:9% 5% 4%;clip-path:polygon(2% 0,98% 0,84% 97%,75% 100%,25% 100%,16% 97%);border-radius:3% 3% 12% 12%;background:linear-gradient(90deg,rgba(255,255,255,.6) 0,rgba(255,255,255,.12) 8%,rgba(228,242,247,.06) 22%,rgba(255,255,255,.16) 47%,rgba(210,229,237,.06) 72%,rgba(255,255,255,.5) 94%,rgba(255,255,255,.72) 100%);box-shadow:inset 2px 0 0 rgba(255,255,255,.72),inset -2px 0 0 rgba(208,226,235,.6),inset 0 -3px 4px rgba(220,237,243,.7)}
+.dd-drink-art .frozen{inset:4% 5% 4%;clip-path:polygon(0 0,100% 0,85% 97%,76% 100%,24% 100%,15% 97%);border-radius:1% 1% 10% 10%;background:radial-gradient(ellipse at 18% 13%,rgba(255,255,255,.88) 0 1.5%,transparent 2.1%),radial-gradient(ellipse at 71% 18%,rgba(255,255,255,.72) 0 1.2%,transparent 1.9%),radial-gradient(ellipse at 42% 35%,rgba(255,255,255,.55) 0 1.7%,transparent 2.5%),radial-gradient(ellipse at 77% 53%,rgba(255,255,255,.54) 0 1.35%,transparent 2%),radial-gradient(ellipse at 29% 72%,rgba(255,255,255,.48) 0 1.5%,transparent 2.2%),repeating-radial-gradient(ellipse at 34% 23%,rgba(255,255,255,.16) 0 1px,transparent 2px 7px),linear-gradient(154deg,var(--c1) 2%,color-mix(in srgb,var(--c1) 74%,white) 31%,var(--c2) 100%);box-shadow:inset 10px 0 15px rgba(255,255,255,.22),inset -9px -13px 18px rgba(33,23,45,.18),inset 0 8px 10px rgba(255,255,255,.14)}
+.dd-drink-art .ice{position:absolute;z-index:2;inset:8% 10% 8%;opacity:.64;background:radial-gradient(ellipse at 14% 12%,rgba(255,255,255,.92) 0 2%,transparent 2.6%),radial-gradient(ellipse at 80% 21%,rgba(255,255,255,.76) 0 1.7%,transparent 2.3%),radial-gradient(ellipse at 27% 47%,rgba(255,255,255,.68) 0 1.3%,transparent 2%),radial-gradient(ellipse at 72% 67%,rgba(255,255,255,.63) 0 1.5%,transparent 2.2%),radial-gradient(ellipse at 39% 87%,rgba(255,255,255,.54) 0 1.2%,transparent 1.8%)}
+.dd-drink-art .wall{position:absolute;z-index:4;inset:0;background:linear-gradient(96deg,rgba(255,255,255,.82) 0 2%,rgba(255,255,255,.18) 9%,transparent 22% 70%,rgba(255,255,255,.25) 82%,rgba(255,255,255,.72) 98%),linear-gradient(180deg,rgba(255,255,255,.28),transparent 18% 84%,rgba(255,255,255,.42));clip-path:polygon(2% 0,98% 0,84% 97%,75% 100%,25% 100%,16% 97%)}
+.dd-drink-art .wall:before,.dd-drink-art .wall:after{content:"";position:absolute;top:8%;bottom:14%;width:4%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,.08));filter:blur(.4px)}
+.dd-drink-art .wall:before{left:16%;transform:skewX(-5deg)}
+.dd-drink-art .wall:after{right:13%;width:2%;opacity:.65}
+.dd-drink-art .ridges{position:absolute;z-index:5;inset:24% 8% 16%;display:none;background:repeating-linear-gradient(180deg,transparent 0 8%,rgba(255,255,255,.55) 8.5% 10%,rgba(126,157,174,.2) 11% 12.5%,transparent 13% 17%);clip-path:polygon(4% 0,96% 0,83% 100%,17% 100%);filter:drop-shadow(0 1px 1px rgba(29,57,75,.13))}
+.dd-drink-art .base{position:absolute;z-index:7;left:20%;right:20%;bottom:2%;height:7%;border:2px solid rgba(229,242,248,.8);border-top-color:rgba(185,208,219,.45);border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(216,232,240,.34));box-shadow:0 2px 3px rgba(11,31,48,.13),inset 0 -1px 2px rgba(255,255,255,.6)}
+.dd-drink-art .rim{z-index:8;left:0;right:0;top:3%;bottom:auto;height:10%;border:2px solid rgba(228,240,246,.9);border-top:3px solid rgba(255,255,255,.94);border-bottom-color:rgba(159,188,203,.5);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(207,225,234,.22) 58%,rgba(255,255,255,.38));box-shadow:0 2px 3px rgba(12,36,54,.16),inset 0 2px 2px rgba(255,255,255,.7)}
+.dd-drink-art .rim:after{content:"";position:absolute;inset:23% 5% 27%;border:1px solid rgba(135,165,181,.38);border-top-color:rgba(255,255,255,.9);border-radius:50%;background:rgba(249,253,255,.12)}
+.dd-drink-art .lid{display:none;z-index:9;left:-2%;right:-2%;top:8%;height:9%;border:2px solid rgba(228,242,248,.88);border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(205,224,234,.24));box-shadow:0 2px 3px rgba(11,34,52,.18),inset 0 2px 2px rgba(255,255,255,.62)}
+.dd-drink-art .dome{display:none;position:absolute;z-index:7;left:10%;right:10%;top:-9%;height:29%;border:2px solid rgba(232,244,249,.72);border-bottom:0;border-radius:50% 50% 10% 10%/42% 42% 11% 11%;background:radial-gradient(ellipse at 37% 11%,rgba(255,255,255,.72),transparent 22%),linear-gradient(90deg,rgba(255,255,255,.37),rgba(223,239,246,.08) 43%,rgba(255,255,255,.34));box-shadow:inset 2px 0 2px rgba(255,255,255,.42),inset -2px 0 2px rgba(180,207,220,.2)}
+.dd-drink-art.cup-dome .dome,.dd-drink-art.cup-dome .lid{display:block}
+.dd-drink-art.cup-dome .rim{top:12%;height:10%}
+.dd-drink-art.cup-dome .cup-body{top:16%}
+.dd-drink-art.cup-dome .straw{z-index:10}
+.dd-drink-art.cup-dome .frozen{top:2%}
+.dd-drink-art.cup-flat .lid{display:block;top:5%}
+.dd-drink-art.cup-flat .rim{top:4%}
+.dd-drink-art.cup-flat .cup-body{top:11%}
+.dd-drink-art.cup-flat .straw{z-index:10}
+.dd-drink-art.cup-open .straw,.dd-drink-art.cup-ribbed .straw{display:none}
+.dd-drink-art.cup-ribbed .ridges{display:block}
+.dd-drink-art.cup-ribbed .cup-body{top:10%}
+.dd-drink-art.cup-small{aspect-ratio:.78}
+.dd-drink-art.cup-small .cup-body{top:15%;left:7%;right:7%}
+.dd-drink-art.cup-small .rim{top:10%;left:3%;right:3%}
+.dd-drink-art.cup-small .lid{top:11%;left:1%;right:1%}
+.dd-drink-art.cup-small .straw{top:-14%;height:55%}
+.dd-drink-art.cup-small .base{left:23%;right:23%}
+.hero-drinks .dd-drink-art{filter:drop-shadow(0 20px 18px rgba(0,0,0,.36)) drop-shadow(0 2px 1px rgba(255,255,255,.22))}
+.hero-drinks .dd-drink-art:after{background:rgba(0,0,0,.44);filter:blur(8px)}
+/* Tall clear PET cup with the low, ribbed flat lid from the supplied reference. */
+    .dd-drink-art{aspect-ratio:.62}
+.dd-drink-art .cup-body{inset:12% 7% 3%;clip-path:polygon(2% 0,98% 0,86% 97%,77% 100%,23% 100%,14% 97%)}
+.dd-drink-art .frozen{inset:4% 5% 3%;clip-path:polygon(0 0,100% 0,86% 97%,77% 100%,23% 100%,14% 97%);background:radial-gradient(ellipse at 18% 13%,rgba(255,255,255,.5) 0 1.4%,transparent 2.1%),radial-gradient(ellipse at 70% 26%,rgba(255,255,255,.38) 0 1.2%,transparent 1.9%),linear-gradient(180deg,var(--c1) 0 33.333%,var(--c2,var(--c1)) 33.333% 66.666%,var(--c3,var(--c2,var(--c1))) 66.666% 100%);box-shadow:inset 10px 0 15px rgba(255,255,255,.2),inset -9px -13px 18px rgba(33,23,45,.13),inset 0 8px 10px rgba(255,255,255,.12)}
+.dd-drink-art .wall{clip-path:polygon(2% 0,98% 0,86% 97%,77% 100%,23% 100%,14% 97%)}
+.dd-drink-art .lid{display:block;left:-1%;right:-1%;top:4%;height:10%;border:2px solid rgba(211,226,233,.94);border-top:4px solid rgba(249,253,255,.98);border-bottom-color:rgba(140,166,179,.55);border-radius:50%;background:repeating-linear-gradient(90deg,rgba(125,151,164,.26) 0 2px,rgba(255,255,255,.45) 2px 6px),linear-gradient(180deg,rgba(255,255,255,.75),rgba(207,225,234,.28));box-shadow:0 3px 3px rgba(11,34,52,.16),inset 0 2px 2px rgba(255,255,255,.72)}
+.dd-drink-art .lid:after{content:"";position:absolute;left:4%;right:4%;top:45%;height:38%;border:1px solid rgba(134,160,174,.4);border-radius:50%;background:rgba(249,253,255,.18)}
+.dd-drink-art .rim{top:8%;left:2%;right:2%;height:7%;border-width:1px;opacity:.72}
+.dd-drink-art .straw{left:56%;top:-21%;width:7%;height:63%;border:2px solid rgba(205,219,226,.72);background:linear-gradient(90deg,rgba(255,255,255,.72),rgba(214,228,234,.3) 52%,rgba(255,255,255,.6));box-shadow:inset 1px 0 1px rgba(255,255,255,.9),1px 1px 2px rgba(15,41,59,.12);transform:rotate(8deg)}
+.dd-drink-art .straw:before{content:"";position:absolute;left:-2px;bottom:94%;width:235%;height:16%;border:2px solid rgba(205,219,226,.72);border-bottom:0;border-left:0;border-radius:0 12px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.65),rgba(214,228,234,.25));transform:skewX(-26deg);transform-origin:left bottom}
+.dd-drink-art.no-straw .straw{display:none}
+.dd-drink-art.cup-flat .cup-body,.dd-drink-art.cup-small .cup-body{top:12%}
+.dd-drink-art.cup-flat .rim,.dd-drink-art.cup-small .rim{top:8%}
+.dd-drink-art.cup-flat .lid,.dd-drink-art.cup-small .lid{top:4%}
+.hero-drinks .dd-drink-art:nth-child(1),.hero-drinks .dd-drink-art:nth-child(2){width:158px;transform:none}
+.hero-drinks .dd-drink-art:nth-child(2){width:150px}
+/* Reference-matched flat-lid cup: faceted PET, knurled snap rim, bendy translucent straw. */
+    .dd-drink-art{--pet-hi:rgba(255,255,255,.92);--pet-mid:rgba(218,235,243,.46);--pet-edge:rgba(132,163,178,.58)}
+.dd-drink-art .cup-body{background:linear-gradient(90deg,rgba(255,255,255,.64) 0 2%,rgba(216,234,242,.1) 8% 19%,rgba(255,255,255,.24) 22% 27%,transparent 33% 66%,rgba(255,255,255,.2) 73% 81%,rgba(207,228,237,.12) 88%,rgba(255,255,255,.66) 97% 100%);border:1px solid rgba(183,207,218,.58);box-shadow:inset 2px 0 1px rgba(255,255,255,.82),inset -2px 0 2px rgba(156,185,199,.34),inset 0 -6px 7px rgba(222,237,244,.56)}
+.dd-drink-art .wall{background:linear-gradient(94deg,rgba(255,255,255,.9) 0 1.6%,rgba(255,255,255,.16) 7%,transparent 13% 24%,rgba(255,255,255,.5) 28%,rgba(255,255,255,.08) 34% 63%,rgba(255,255,255,.34) 68%,transparent 74% 87%,rgba(255,255,255,.75) 96%),linear-gradient(180deg,rgba(255,255,255,.3),transparent 19% 82%,rgba(255,255,255,.5))}
+.dd-drink-art .wall:before{left:15%;width:5%;bottom:11%;background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(255,255,255,.13) 72%,rgba(255,255,255,.7));box-shadow:18px 0 14px rgba(255,255,255,.15)}
+.dd-drink-art .wall:after{right:16%;width:2.5%;bottom:12%;background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.08) 65%,rgba(255,255,255,.55))}
+.dd-drink-art .lid{overflow:visible;height:9%;top:4.5%;border:0;background:linear-gradient(180deg,rgba(255,255,255,.98) 0,rgba(222,236,243,.72) 35%,rgba(174,197,208,.32) 70%,rgba(248,252,254,.78) 100%);box-shadow:0 2px 2px rgba(12,32,47,.22),inset 0 1px 0 #fff;filter:drop-shadow(0 2px 1px rgba(8,28,43,.1))}
+.dd-drink-art .lid:before{content:"";position:absolute;left:-1%;right:-1%;top:14%;height:58%;border-radius:50%;border-top:2px solid #fff;border-bottom:2px solid rgba(115,148,164,.46);background:repeating-linear-gradient(90deg,rgba(108,139,154,.42) 0 1.4%,rgba(255,255,255,.68) 1.4% 4.1%);clip-path:polygon(0 24%,100% 24%,97% 86%,3% 86%)}
+.dd-drink-art .lid:after{left:5%;right:5%;top:-10%;height:58%;border:1px solid rgba(151,178,190,.5);border-top:2px solid rgba(255,255,255,.98);background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(222,236,242,.2));box-shadow:inset 0 1px 1px rgba(255,255,255,.9)}
+.dd-drink-art .rim{top:8.5%;height:6.2%;border:1px solid rgba(150,180,193,.58);border-top-color:rgba(255,255,255,.95);background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(196,218,228,.2));box-shadow:0 2px 2px rgba(10,32,48,.12)}
+.dd-drink-art .base{left:18%;right:18%;bottom:1.5%;height:7.5%;border:2px solid rgba(211,230,239,.88);border-top-color:rgba(143,174,188,.38);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(224,238,245,.58));box-shadow:0 3px 4px rgba(7,25,40,.2),inset 0 -2px 2px rgba(255,255,255,.82)}
+.dd-drink-art .straw{top:-22%;height:66%;width:7.5%;border:1.5px solid rgba(190,214,224,.72);border-radius:4px;background:linear-gradient(90deg,rgba(255,255,255,.86) 0 22%,rgba(203,224,233,.28) 42% 66%,rgba(255,255,255,.72));box-shadow:inset -1px 0 rgba(116,151,167,.24),1px 2px 3px rgba(10,34,50,.12)}
+.dd-drink-art .straw:before{left:-1px;bottom:94%;width:245%;height:17%;border:1.5px solid rgba(190,214,224,.74);border-left:0;border-bottom:0;border-radius:0 8px 0 0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.8) 0 8%,rgba(183,209,220,.25) 8% 15%),linear-gradient(180deg,rgba(255,255,255,.72),rgba(210,228,236,.25));transform:skewX(-28deg)}
+.dd-drink-art .straw:after{content:"";position:absolute;left:32%;top:2%;width:24%;height:92%;border-radius:99px;background:rgba(255,255,255,.48)}
+.dd-drink-art.exploded{aspect-ratio:.6}
+.dd-drink-art.exploded .lid{top:-5%;transform:scale(.98);filter:drop-shadow(0 9px 5px rgba(3,18,31,.2))}
+.dd-drink-art.exploded .rim{top:17%}
+.dd-drink-art.exploded .cup-body{top:19%}
+.dd-drink-art.exploded .base{bottom:1%}
+.dd-drink-art.exploded .straw{display:none}
+.hero-drinks .dd-drink-art.exploded{transform:translateY(10px)}
+@media(max-width:600px){.hero-drinks .dd-drink-art:nth-child(1){width:110px}.hero-drinks .dd-drink-art:nth-child(2){width:104px}.dd-drink-art.exploded .lid{top:-3%}}
+.dd-drink-art{transform-style:preserve-3d;will-change:filter;animation:cup-turn 5.6s linear infinite;filter:drop-shadow(0 15px 12px rgba(7,25,44,.26)) drop-shadow(0 1px 0 rgba(255,255,255,.7))}
+.dd-drink-art:after{animation:shadow-turn 5.6s linear infinite}
+.menu-card:nth-child(2n) .dd-drink-art{animation-delay:-1.4s}
+.menu-card:nth-child(3n) .dd-drink-art{animation-delay:-2.8s}
+.signature-list .drink:nth-child(4n) .dd-drink-art{animation-delay:-4.2s}
+.more-card:nth-child(2) .dd-drink-art{animation-delay:-2.1s}
+.more-card:nth-child(3) .dd-drink-art{animation-delay:-3.7s}
+.hero-drinks .dd-drink-art:nth-child(2){animation-delay:-2.8s}
+@keyframes cup-turn{from{--cup-angle:0deg}to{--cup-angle:360deg}}
+@keyframes shadow-turn{0%,100%{transform:translateX(8%) scaleX(.88);opacity:.65}50%{transform:translateX(-8%) scaleX(1.08);opacity:.82}}
+.dd-drink-art .cup-body{overflow:hidden;border-color:rgba(181,207,219,.72);box-shadow:inset 2px 0 2px rgba(255,255,255,.9),inset -2px 0 2px rgba(122,157,174,.38),inset 0 -7px 8px rgba(221,238,245,.72),0 1px 0 rgba(255,255,255,.7)}
+.dd-drink-art .frozen{inset:4.5% 5.5% 3%;filter:saturate(1.04);box-shadow:inset 13px 0 17px rgba(255,255,255,.2),inset -12px -14px 21px rgba(21,23,45,.16),inset 0 10px 13px rgba(255,255,255,.16)}
+.dd-drink-art .liquid-top{position:absolute;z-index:2;left:5%;right:5%;top:2%;height:8%;border-radius:50%;background:linear-gradient(180deg,color-mix(in srgb,var(--c1) 64%,white),var(--c1));border-top:1px solid rgba(255,255,255,.8);box-shadow:inset 0 3px 4px rgba(255,255,255,.28),0 2px 3px rgba(23,42,58,.16)}
+.dd-drink-art .facets{position:absolute;z-index:3;inset:7% 1% 5%;clip-path:polygon(1% 0,99% 0,86% 97%,77% 100%,23% 100%,14% 97%);background:linear-gradient(101deg,transparent 0 9%,rgba(255,255,255,.36) 10% 13%,transparent 14% 27%,rgba(255,255,255,.14) 28% 31%,transparent 32% 48%,rgba(94,131,149,.12) 49% 51%,transparent 52% 68%,rgba(255,255,255,.28) 69% 72%,transparent 73% 87%,rgba(255,255,255,.42) 88% 91%,transparent 92%);background-size:145% 100%;animation:facet-sweep 5.6s linear infinite;mix-blend-mode:screen}
+.dd-drink-art .condensation{position:absolute;z-index:6;inset:15% 10% 11%;opacity:.68;background:radial-gradient(circle at 13% 9%,rgba(255,255,255,.95) 0 1.1%,rgba(198,222,232,.55) 1.4%,transparent 2.1%),radial-gradient(circle at 73% 14%,rgba(255,255,255,.9) 0 .9%,rgba(185,213,225,.48) 1.2%,transparent 1.9%),radial-gradient(circle at 31% 32%,rgba(255,255,255,.86) 0 1.35%,rgba(173,206,219,.42) 1.6%,transparent 2.4%),radial-gradient(circle at 86% 41%,rgba(255,255,255,.92) 0 1%,rgba(177,208,221,.46) 1.3%,transparent 2%),radial-gradient(circle at 17% 62%,rgba(255,255,255,.82) 0 1.2%,rgba(167,200,214,.42) 1.5%,transparent 2.2%),radial-gradient(circle at 67% 72%,rgba(255,255,255,.86) 0 1.4%,rgba(171,203,216,.4) 1.7%,transparent 2.5%),radial-gradient(ellipse at 39% 86%,rgba(255,255,255,.88) 0 1%,rgba(178,209,221,.42) 1.4%,transparent 2.2%);animation:droplet-turn 5.6s linear infinite}
+.dd-drink-art .wall{z-index:7;background:linear-gradient(96deg,rgba(255,255,255,.94) 0 1.5%,rgba(255,255,255,.15) 8%,transparent 14% 25%,rgba(255,255,255,.56) 28%,rgba(255,255,255,.05) 34% 62%,rgba(255,255,255,.34) 68%,transparent 75% 87%,rgba(255,255,255,.82) 97%),linear-gradient(180deg,rgba(255,255,255,.34),transparent 20% 80%,rgba(255,255,255,.58));background-size:155% 100%;animation:wall-turn 5.6s linear infinite}
+@keyframes facet-sweep{from{background-position:145% 0}to{background-position:-45% 0}}
+@keyframes wall-turn{from{background-position:155% 0}to{background-position:-55% 0}}
+@keyframes droplet-turn{0%,100%{transform:translateX(7%);opacity:.58}50%{transform:translateX(-7%);opacity:.76}}
+.dd-drink-art .lid{height:9.8%;top:4%;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(224,238,244,.78) 32%,rgba(151,181,195,.32) 68%,rgba(250,253,255,.9));box-shadow:0 3px 4px rgba(8,28,43,.24),inset 0 1px 0 #fff}
+.dd-drink-art .lid:before{background:repeating-linear-gradient(90deg,rgba(92,127,144,.46) 0 1px,rgba(255,255,255,.82) 1px 4px);box-shadow:0 1px 1px rgba(40,70,86,.18)}
+.dd-drink-art .lid:after{background:radial-gradient(ellipse at 58% 52%,rgba(125,158,174,.26) 0 4%,transparent 4.6%),linear-gradient(180deg,rgba(255,255,255,.94),rgba(216,234,241,.24))}
+.dd-drink-art .rim{z-index:9}
+.dd-drink-art .base{z-index:10}
+.dd-drink-art .straw{z-index:11;animation:straw-orbit 5.6s linear infinite;will-change:left,transform,opacity}
+.menu-card:nth-child(2n) .dd-drink-art .straw{animation-delay:-1.4s}
+.menu-card:nth-child(3n) .dd-drink-art .straw{animation-delay:-2.8s}
+.signature-list .drink:nth-child(4n) .dd-drink-art .straw{animation-delay:-4.2s}
+.more-card:nth-child(2) .dd-drink-art .straw{animation-delay:-2.1s}
+.more-card:nth-child(3) .dd-drink-art .straw{animation-delay:-3.7s}
+.hero-drinks .dd-drink-art:nth-child(2) .straw{animation-delay:-2.8s}
+@keyframes straw-orbit{0%,100%{left:58%;z-index:11;opacity:1;transform:rotate(8deg) scaleX(1)}25%{left:47%;z-index:11;opacity:.72;transform:rotate(2deg) scaleX(.72)}49%{left:36%;z-index:1;opacity:.42;transform:rotate(-7deg) scaleX(-.72)}51%{left:36%;z-index:1;opacity:.42;transform:rotate(-7deg) scaleX(-.72)}75%{left:47%;z-index:11;opacity:.72;transform:rotate(2deg) scaleX(.72)}}
+@keyframes size-cup-turn{from{background-position:130% 0}to{background-position:-80% 0}}
+.menu-card:hover .dd-drink-art{filter:drop-shadow(0 18px 13px rgba(7,25,44,.31)) drop-shadow(0 1px 0 rgba(255,255,255,.76))}
+@media(prefers-reduced-motion:reduce){.dd-drink-art,.dd-drink-art:after,.dd-drink-art .facets,.dd-drink-art .condensation,.dd-drink-art .wall,.dd-drink-art .straw,.cup-shape{animation:none!important}}
+/* Repo integration: size the cup to its menu-card wrapper (.drink-art). */
+.dd-drink-art{width:100%;}
