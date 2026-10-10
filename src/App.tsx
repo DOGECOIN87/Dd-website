@@ -3,6 +3,7 @@ import { About } from './components/About';
 import { Compare } from './components/Compare';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
+import { Locations } from './components/Locations';
 import { Menu } from './components/Menu';
 import { Navbar } from './components/Navbar';
 import { OrderBand } from './components/OrderBand';
@@ -17,6 +18,7 @@ export default function App() {
         <Navbar />
         <main>
           <Hero />
+          <Locations />
           <Quiz />
           <Compare />
           <Menu />

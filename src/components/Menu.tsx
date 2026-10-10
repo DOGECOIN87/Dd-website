@@ -1,9 +1,9 @@
 import { Check, ExternalLink, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { addons, daiquiriSizes, flavorColors, menuItems, type Flavor, type MenuCategory, type MenuItem } from '../data/menu';
+import { specForItem } from '../data/drinks';
 import { site, toast } from '../data/site';
-import { DrinkArt } from './DrinkArt';
-import './drink-art.css';
+import { RealCup } from './RealCup';
 
 const tabs: { id: MenuCategory; label: string }[] = [
   { id: 'signatures', label: 'Signatures' }, { id: 'classics', label: 'Classics' }, { id: 'cocktails', label: 'Cocktails' }, { id: 'extras', label: 'Party favors & extras' },
@@ -12,8 +12,8 @@ const tabs: { id: MenuCategory; label: string }[] = [
 function DrinkCard({ item }: { item: MenuItem }) {
   const fanFavorite = site.fanFavorites.includes(item.name);
   return (
-    <article className="drink-card">
-      <div className="drink-art"><DrinkArt flavors={item.flavors} /></div>
+    <article className="drink-card" data-cup-trigger>
+      <RealCup spec={specForItem(item)} label={item.flavors?.length ? `${item.name}: ${item.flavors.join(', ')}` : item.name} className="drink-art" />
       <div className="drink-copy">
         <div className="drink-title"><h3>{item.name}</h3>{fanFavorite && <span className="favorite-badge">Fan favorite</span>}</div>
         {item.flavors?.length ? <div className="flavor-list">{item.flavors.map((flavor) => <span key={flavor} style={{ '--flavor': flavorColors[flavor] } as CSSProperties}>{flavor}</span>)}</div> : <p className="drink-description">{item.description || 'Available through Toast ordering.'}</p>}
