@@ -20,7 +20,7 @@ export function Hero() {
         </motion.div>
         <ul className="lineup" aria-label="What we pour">
           {lineup.map((drink) => (
-            <li className="lineup-item" key={drink.name}>
+            <li className="lineup-item" key={drink.name} data-cup-trigger>
               <RealCup spec={drink.spec} label={`${drink.name} in a clear Sip Society cup`} className="lineup-cup" />
               <div className="lineup-label">
                 <h2>{drink.name}</h2>

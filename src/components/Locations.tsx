@@ -16,7 +16,7 @@ function useNow() {
 
 function LocationArt({ location }: { location: Location }) {
   if (location.id === 'fm306') {
-    return <div className="location-art"><img src="/photos/everything-sip-lineup.webp" alt="" /></div>;
+    return <div className="location-art"><img src="/photos/fm306-drive-thru.webp" alt="" /></div>;
   }
   return (
     <div className="location-art">

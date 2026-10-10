@@ -3,7 +3,7 @@
  * `kind` and `colors`; sensible defaults come from the kind.
  */
 export type CupKind =
-  | 'frozen' // slushy daiquiri / smoothie heaped under a dome lid
+  | 'frozen' // slushy daiquiri / smoothie heaped above the rim
   | 'latte' // iced coffee
   | 'boba' // milk tea with tapioca pearls
   | 'soda' // dirty soda / still drinks over ice
@@ -16,12 +16,13 @@ export interface DrinkSpec {
   colors: string[];
   /** Spiral the colors around the cup instead of stacking them in layers. */
   swirl?: boolean;
-  lid?: 'dome' | 'flat' | 'none';
   /** Straw color. Omit for no straw. */
   straw?: string;
   whip?: boolean;
   ice?: boolean;
   strawberry?: boolean;
+  /** Lime wheel on the rim. */
+  lime?: boolean;
   pearls?: boolean;
   gummies?: boolean;
   /** Syrup or cream drizzled down the inside of the wall. */
@@ -30,7 +31,7 @@ export interface DrinkSpec {
   inclusions?: 'bubbles' | 'fruit' | 'specks' | 'seeds';
   /** Glossy set gelatin instead of a liquid (jello shots). */
   jello?: boolean;
-  /** Print the Sip Society + Daiquiri Depot logo on the cup. Defaults to true for tall cups. */
+  /** Print the Sip Society + Daiquiri depot logo on the cup. Defaults to true for tall cups. */
   logo?: boolean;
 }
 

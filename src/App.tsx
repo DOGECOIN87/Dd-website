@@ -10,7 +10,6 @@ import { OrderBand } from './components/OrderBand';
 import { Quiz } from './components/Quiz';
 import { SipBar } from './components/SipBar';
 import { Visit } from './components/Visit';
-import { Watch } from './components/Watch';
 
 export default function App() {
   return (
@@ -23,7 +22,6 @@ export default function App() {
           <Quiz />
           <Compare />
           <Menu />
-          <Watch />
           <SipBar />
           <OrderBand />
           <About />

@@ -9,7 +9,7 @@ export const lineup: { name: string; detail: string; spec: DrinkSpec }[] = [
   {
     name: 'Frozen Daiquiris',
     detail: 'Layered, swirled or straight up. 16 oz to a full gallon.',
-    spec: { kind: 'frozen', colors: ['#e8434f', '#f7c443', '#3f9fdc'], straw: STRAW_PINK, strawberry: true },
+    spec: { kind: 'frozen', colors: ['#e8434f', '#f7c443', '#3f9fdc'], straw: STRAW_PINK, strawberry: true, lime: true },
   },
   {
     name: 'Gourmet Coffee',
@@ -47,14 +47,14 @@ const extras: Record<string, DrinkSpec> = {
   'Tipsy Bears': { kind: 'shot', colors: [], gummies: true },
   'Gummy Bears': { kind: 'shot', colors: [], gummies: true },
   Water: { kind: 'soda', colors: ['#dcebf2', '#cfe3ec'], ice: true, straw: STRAW_PINK, logo: true },
-  'Extra Cup': { kind: 'empty', colors: [], lid: 'none' },
+  'Extra Cup': { kind: 'empty', colors: [] },
 };
 
-/** Picks the cup, lid, colours and toppings that represent a menu item. */
+/** Picks the cup, colours and toppings that represent a menu item. */
 export function specForItem(item: MenuItem): DrinkSpec {
   if (cocktails[item.name]) return cocktails[item.name];
   if (extras[item.name]) return extras[item.name];
-  if (item.category === 'extras') return { kind: 'empty', colors: [], lid: 'dome', straw: STRAW_PINK };
+  if (item.category === 'extras') return { kind: 'empty', colors: [], straw: STRAW_PINK };
   const colors = item.flavors?.length
     ? item.flavors.map((flavor) => flavorColors[flavor])
     : [flavorColors.Strawberry, flavorColors.Mango, flavorColors.Margarita, flavorColors.Hypnotic];

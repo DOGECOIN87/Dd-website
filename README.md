@@ -21,13 +21,14 @@ Toast ordering deliberately opens on Toast rather than inside the site: Toast bl
 
 ## 3D cups
 
-Every drink on the site is a live, slowly spinning 3D model rendered with three.js (`src/cups/`), not an image:
+Every drink on the site is a live 3D model rendered with three.js (`src/cups/`), not an image. Cups sit still and spin in place while their card is hovered, focused, or tapped on touch screens:
 
-- `geometry.ts` builds the clear PET cup (push-up base, stacking foot, tapered wall, rolled rim), dome and flat lids, the drink volume, whipped cream and garnishes.
-- `textures.ts` paints the drink colours (layers, swirls, drizzle, pearls), the condensation normal map and the printed cup logo at runtime.
-- `engine.ts` uses one shared WebGL renderer for the whole page and copies each cup into its own canvas, so dozens of cups can spin at once. Only on-screen cups render, at up to 30 fps. Visitors with reduced motion enabled get a still cup.
+- `geometry.ts` builds the open clear PET cup (push-up base, stacking foot, tapered wall, rolled rim), the drink volume, whipped cream and garnishes. Cups never have lids.
+- `textures.ts` paints the drink colours (layers, swirls, drizzle, pearls) and the condensation normal map at runtime, and prints the real logo from `public/brand/sip-society-daiquiri-depot.svg` (falling back to the `.webp`) on each cup, in cream ink on dark drinks.
+- `engine.ts` uses one shared WebGL renderer for the whole page and copies each cup into its own canvas. A still cup costs nothing after its first frame; only spinning cups render, at up to 30 fps. Visitors with reduced motion enabled always get a still cup.
+- `src/components/RealCup.tsx` wires the spin to the nearest ancestor marked `data-cup-trigger` (a whole menu card or lineup item).
 - `src/data/drinks.ts` maps the hero lineup and each menu item to a cup. Menu flavours drive the colours automatically.
 
 ## Assets
 
-Business-provided brand assets, photos and videos are in `public/brand`, `public/photos` and `public/video`. Videos were re-encoded for the web (H.264, faststart) with WebP poster frames. Replace these with full-resolution originals when they are available, retaining the same filenames or updating their references in the components and `index.html`.
+Business-provided brand assets and photos are in `public/brand` and `public/photos`. Videos are kept in `media/video` for later use and are not deployed or shown on the site yet. Replace these with full-resolution originals when they are available, retaining the same filenames or updating their references in the components and `index.html`.

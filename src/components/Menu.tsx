@@ -12,7 +12,7 @@ const tabs: { id: MenuCategory; label: string }[] = [
 function DrinkCard({ item }: { item: MenuItem }) {
   const fanFavorite = site.fanFavorites.includes(item.name);
   return (
-    <article className="drink-card">
+    <article className="drink-card" data-cup-trigger>
       <RealCup spec={specForItem(item)} label={item.flavors?.length ? `${item.name}: ${item.flavors.join(', ')}` : item.name} className="drink-art" />
       <div className="drink-copy">
         <div className="drink-title"><h3>{item.name}</h3>{fanFavorite && <span className="favorite-badge">Fan favorite</span>}</div>

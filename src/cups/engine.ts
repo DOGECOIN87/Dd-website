@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import {
-  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, domeCrown, domeLidGeometry, drizzleOverWhipGeometry,
-  flatLidGeometry, flatLidTop, liquidGeometry, mulberry, sideR, strawberryGeometry, whipGeometry,
+  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, drizzleOverWhipGeometry, liquidGeometry, mulberry, sideR,
+  sideTop, strawberryGeometry, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
 import {
-  condensationNormalMap, liquidTexture, logoTexture, luminance, shadowTexture, slushNormalMap, strawberryTexture,
+  condensationNormalMap, limeTexture, liquidTexture, logoTexture, luminance, shadowTexture, slushNormalMap, strawberryTexture,
 } from './textures';
 import { specKey, type DrinkSpec } from './types';
 
@@ -17,7 +17,10 @@ import { specKey, type DrinkSpec } from './types';
  * menu can show dozens of live 3D cups.
  */
 
-const TURN_SECONDS = 12; // one slow revolution every 12 s
+const TURN_SECONDS = 6; // one revolution every 6 s while hovered or selected
+const SPIN_SPEED = (Math.PI * 2) / TURN_SECONDS;
+const EASE_SECONDS = 0.45; // time to spin up to speed, and to glide to a stop
+const REST_ANGLE = -0.35; // logo faces the viewer, turned slightly
 const FRAME_MS = 1000 / 30;
 
 interface Handle {
@@ -25,7 +28,10 @@ interface Handle {
   ctx: CanvasRenderingContext2D;
   key: string;
   spec: DrinkSpec;
-  phase: number;
+  /** Hovered, focused or tapped: the cup spins while true and glides to a stop after. */
+  active: boolean;
+  angle: number;
+  velocity: number;
   visible: boolean;
   w: number;
   h: number;
@@ -119,11 +125,11 @@ class CupEngine {
   // Shared resources
   private readonly cupGeo = new Map<CupDims, THREE.BufferGeometry>();
   private readonly cupMat = new Map<string, THREE.MeshPhysicalMaterial>();
-  private readonly lidMat: THREE.MeshPhysicalMaterial;
   private readonly slush = slushNormalMap();
   private readonly shadow: THREE.Mesh;
   private readonly logos = new Map<string, Promise<THREE.Texture>>();
   private strawberry?: THREE.Group;
+  private lime?: THREE.Mesh;
 
   constructor() {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -137,11 +143,6 @@ class CupEngine {
     const rim = new THREE.DirectionalLight('#ffd9ea', 0.7);
     rim.position.set(4, 3, -6);
     this.scene.add(key, rim, new THREE.HemisphereLight('#ffffff', '#c9b9ad', 0.35));
-
-    this.lidMat = clearPlastic(new THREE.MeshPhysicalMaterial({
-      color: '#ffffff', roughness: 0.04, metalness: 0, transmission: 1, thickness: 0.12, ior: 1.57,
-      envMapIntensity: 2.1, transparent: true, depthWrite: false,
-    }), 0.1);
 
     const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false });
     this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5), shadowMat);
@@ -175,23 +176,42 @@ class CupEngine {
     this.reduced.addEventListener?.('change', () => this.markAllDirty());
   }
 
-  mount(canvas: HTMLCanvasElement, spec: DrinkSpec) {
+  mount(canvas: HTMLCanvasElement, spec: DrinkSpec): CupControls {
     const ctx = canvas.getContext('2d');
-    if (!ctx) return () => undefined;
+    if (!ctx) return { dispose: () => undefined, setActive: () => undefined };
     const key = specKey(spec);
     const handle: Handle = {
-      canvas, ctx, key, spec, phase: Math.random() * Math.PI * 2, visible: false, w: 0, h: 0, dirty: true,
+      canvas, ctx, key, spec, active: false, angle: 0, velocity: 0, visible: false, w: 0, h: 0, dirty: true,
     };
     this.handles.add(handle);
     this.byCanvas.set(canvas, handle);
     this.io.observe(canvas);
     this.ro.observe(canvas);
-    return () => {
-      this.io.unobserve(canvas);
-      this.ro.unobserve(canvas);
-      this.byCanvas.delete(canvas);
-      this.handles.delete(handle);
+    return {
+      dispose: () => {
+        this.io.unobserve(canvas);
+        this.ro.unobserve(canvas);
+        this.byCanvas.delete(canvas);
+        this.handles.delete(handle);
+      },
+      setActive: (active: boolean) => {
+        if (handle.active === active) return;
+        handle.active = active;
+        this.kick();
+      },
     };
+  }
+
+  /** Eases a cup's spin up while active and down to a stop after. Returns true if it turned. */
+  private advance(handle: Handle, dt: number) {
+    const target = handle.active && !this.reduced.matches ? SPIN_SPEED : 0;
+    const step = (SPIN_SPEED / EASE_SECONDS) * dt;
+    handle.velocity = target > handle.velocity
+      ? Math.min(target, handle.velocity + step)
+      : Math.max(target, handle.velocity - step);
+    if (handle.velocity <= 0) return false;
+    handle.angle = (handle.angle + handle.velocity * dt) % (Math.PI * 2);
+    return true;
   }
 
   private markAllDirty() {
@@ -237,25 +257,26 @@ class CupEngine {
 
   private frame = (now: number) => {
     this.raf = 0;
-    const animate = !this.reduced.matches;
     // Never spend more than about a third of the main thread on cups: slow GPUs get fewer frames, not jank.
-    const due = now - this.last >= Math.max(FRAME_MS - 2, this.cost * 3);
-    let anyVisible = false;
-    if (due || !animate) {
-      if (due) this.last = now;
-      const t = now / 1000;
-      const start = performance.now();
-      for (const handle of this.handles) {
-        if (!handle.visible || !handle.w) continue;
-        anyVisible = true;
-        if (!animate && !handle.dirty) continue;
-        if (this.draw(handle, animate ? t : 0)) handle.dirty = false;
-      }
-      this.cost = this.cost * 0.8 + (performance.now() - start) * 0.2;
-    } else {
-      anyVisible = [...this.handles].some((h) => h.visible);
+    if (now - this.last < Math.max(FRAME_MS - 2, this.cost * 3)) {
+      this.kick();
+      return;
     }
-    if (animate && anyVisible) this.kick();
+    const dt = this.last ? Math.min(0.1, (now - this.last) / 1000) : 0;
+    this.last = now;
+    const start = performance.now();
+    let busy = false;
+    for (const handle of this.handles) {
+      const turned = this.advance(handle, dt);
+      if (handle.velocity > 0 || handle.active) busy = true;
+      if (!handle.visible || !handle.w) continue;
+      if ((turned || handle.dirty) && this.draw(handle)) handle.dirty = false;
+      if (handle.dirty) busy = true; // still waiting for its drink to finish building
+    }
+    this.cost = this.cost * 0.8 + (performance.now() - start) * 0.2;
+    // Idle when nothing is spinning: still cups cost nothing after their first frame.
+    if (busy) this.kick();
+    else this.last = 0;
   };
 
   private camera(w: number, h: number) {
@@ -270,7 +291,7 @@ class CupEngine {
     return cam;
   }
 
-  private draw(handle: Handle, t: number) {
+  private draw(handle: Handle) {
     const group = this.groups.get(handle.key);
     if (!group) return false;
     const { w, h } = handle;
@@ -279,9 +300,7 @@ class CupEngine {
       this.glH = Math.max(this.glH, h);
       this.renderer.setSize(this.glW, this.glH, false);
     }
-    // Logo faces the viewer at rest; spinning starts from a random phase per cup.
-    const spin = t ? handle.phase + (t / TURN_SECONDS) * Math.PI * 2 : -0.35;
-    group.rotation.y = Math.PI + spin;
+    group.rotation.y = Math.PI + REST_ANGLE + handle.angle;
     this.scene.add(group);
     this.renderer.setViewport(0, 0, w, h);
     this.renderer.setScissor(0, 0, w, h);
@@ -333,13 +352,21 @@ class CupEngine {
     return this.strawberry.clone();
   }
 
+  private limeMesh() {
+    if (!this.lime) {
+      const face = new THREE.MeshPhysicalMaterial({ map: limeTexture(), roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.2 });
+      const rind = new THREE.MeshStandardMaterial({ color: '#4f8f2a', roughness: 0.5 });
+      this.lime = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.07, 40), [rind, face, face]);
+    }
+    return this.lime.clone();
+  }
+
   private async build(spec: DrinkSpec) {
     const shot = spec.kind === 'shot';
     const d = shot ? SHOT : TALL;
     const seed = hashString(specKey(spec));
     const rand = mulberry(seed);
     const group = new THREE.Group();
-    const lid = spec.lid ?? (spec.kind === 'frozen' || spec.whip ? 'dome' : spec.kind === 'empty' ? 'none' : 'flat');
 
     let geo = this.cupGeo.get(d);
     if (!geo) {
@@ -357,7 +384,7 @@ class CupEngine {
         case 'latte': return { top: d.h - 0.12 };
         case 'boba': return { top: d.h - 0.18, pearlZone: 0.85 };
         case 'shot': return { top: d.h * 0.7 };
-        default: return { top: d.h - 0.32 };
+        default: return { top: d.h - 0.22 };
       }
     })();
     const vMax = shot ? d.h * 1.2 : LIQUID_VMAX;
@@ -426,11 +453,13 @@ class CupEngine {
     if (spec.ice) {
       const iceGeo = new RoundedBoxGeometry(0.34, 0.34, 0.34, 3, 0.07);
       const iceMat = new THREE.MeshPhysicalMaterial({ color: '#e4f1f6', roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.4, normalMap: this.slush, normalScale: new THREE.Vector2(0.25, 0.25) });
-      for (let i = 0; i < 6; i += 1) {
+      // A floating layer plus a couple of cubes heaped above the rim, like a fresh pour.
+      for (let i = 0; i < 8; i += 1) {
         const cube = new THREE.Mesh(iceGeo, iceMat);
+        const upper = i >= 6;
         const a = (i / 6) * Math.PI * 2 + rand() * 0.5;
-        const r = i === 5 ? 0.05 : 0.38 + rand() * 0.14;
-        cube.position.set(Math.cos(a) * r, shape.top + 0.05 + rand() * 0.07, Math.sin(a) * r);
+        const r = upper ? 0.12 + rand() * 0.18 : i === 5 ? 0.05 : 0.38 + rand() * 0.14;
+        cube.position.set(Math.cos(a) * r, shape.top + (upper ? 0.28 : 0.05) + rand() * 0.07, Math.sin(a) * r);
         cube.rotation.set(rand() * 0.6, rand() * 3, rand() * 0.6);
         group.add(cube);
       }
@@ -439,28 +468,34 @@ class CupEngine {
     if (spec.strawberry) {
       const berry = this.strawberryMesh();
       const mound = shape.mound ?? 0;
-      berry.position.set(-0.2, shape.top + mound * 0.8 + 0.1, 0.27);
-      berry.rotation.set(0.35, 0.4, 1.05);
+      // Resting on the slush near the rim, clear of the straw.
+      berry.position.set(-0.42, shape.top + mound * 0.75 + 0.14, 0.42);
+      berry.rotation.set(0.35, 0.8, 1.15);
       berry.scale.setScalar(0.85);
       group.add(berry);
+    }
+
+    if (spec.lime) {
+      // Lime wheel slotted onto the rim.
+      const wheel = this.limeMesh();
+      const phi = -0.75;
+      const R = sideR(d, sideTop(d)) + 0.02;
+      wheel.position.set(Math.cos(phi) * R, d.h + 0.1, Math.sin(phi) * R);
+      wheel.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-Math.sin(phi), 0, Math.cos(phi)));
+      group.add(wheel);
     }
 
     // The cup itself, with condensation below the drink line.
     const cold = spec.kind === 'empty' ? 0 : Math.min(shape.top, d.h - 0.2);
     group.add(new THREE.Mesh(geo, this.cupMaterial(d, cold)));
 
-    if (lid !== 'none') {
-      const lidGeo = lid === 'dome' ? domeLidGeometry(d) : flatLidGeometry(d, shot ? 0 : spec.pearls ? 0.14 : 0.09);
-      group.add(new THREE.Mesh(lidGeo, this.lidMat));
-    }
-
     if (spec.straw && !shot) {
       const radius = spec.pearls ? 0.12 : 0.07;
-      const bottom = new THREE.Vector3(0.42, 0.24, 0);
-      const apex = new THREE.Vector3(0, lid === 'dome' ? domeCrown(d) : lid === 'flat' ? flatLidTop(d) : d.h + 0.2, 0);
-      if (lid === 'none') apex.x = -0.1;
-      const dir = apex.clone().sub(bottom);
-      const length = dir.length() + 0.95;
+      // Open cup: the straw stands from near the base and leans gently, well inside the rim.
+      const bottom = new THREE.Vector3(0.3, 0.22, 0.08);
+      const top = new THREE.Vector3(-0.2, d.h + 1.35, -0.04);
+      const dir = top.clone().sub(bottom);
+      const length = dir.length();
       dir.normalize();
       const strawGeo = new THREE.CylinderGeometry(radius, radius, length, 24, 1, true);
       const strawMat = new THREE.MeshPhysicalMaterial({ color: spec.straw, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2, side: THREE.DoubleSide });
@@ -475,7 +510,7 @@ class CupEngine {
       const ink = spec.kind !== 'empty' && luminance(mid) < 0.3 ? 'light' : 'dark';
       const map = await this.logo(ink);
       const decal = new THREE.Mesh(
-        decalGeometry(d, 1.12, 2.24, 1.27 / sideR(d, 1.68)),
+        decalGeometry(d, 1.0, 2.05, 1.757 / sideR(d, 1.52)),
         new THREE.MeshStandardMaterial({ map, transparent: true, roughness: 0.42, depthWrite: false }),
       );
       group.add(decal);
@@ -503,8 +538,13 @@ function getEngine() {
   return engine;
 }
 
-/** Starts rendering `spec` into `canvas`. Returns a cleanup function, or null if WebGL is unavailable. */
-export function mountCup(canvas: HTMLCanvasElement, spec: DrinkSpec) {
+export interface CupControls {
+  dispose: () => void;
+  setActive: (active: boolean) => void;
+}
+
+/** Starts rendering `spec` into `canvas`. Returns its controls, or null if WebGL is unavailable. */
+export function mountCup(canvas: HTMLCanvasElement, spec: DrinkSpec): CupControls | null {
   const e = getEngine();
   return e ? e.mount(canvas, spec) : null;
 }

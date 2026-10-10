@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from '../data/site';
 
 const links = [
-  ['Locations', '#locations'], ['Menu', '#menu'], ['Watch', '#watch'], ['Help me choose', '#choose'], ['Visit', '#visit'],
+  ['Locations', '#locations'], ['Menu', '#menu'], ['Help me choose', '#choose'], ['Visit', '#visit'],
 ] as const;
 
 export function Navbar() {

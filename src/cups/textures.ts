@@ -327,68 +327,75 @@ export function strawberryTexture() {
   return texture(c);
 }
 
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 /**
- * The Sip Society + Daiquiri Depot cup print: cup-and-S mark, serif wordmark,
- * pink rule and script. `ink` switches between dark ink and white ink for dark drinks.
+ * The cup print: the real Sip Society + Daiquiri depot logo (vector when available,
+ * the web raster otherwise). `light` swaps the slate-navy ink for cream so the
+ * print stays readable on dark drinks.
  */
 export async function logoTexture(ink: 'dark' | 'light') {
-  try {
-    await Promise.race([
-      Promise.all([document.fonts.load('800 80px "Fraunces"'), document.fonts.load('700 80px "Dancing Script"')]),
-      new Promise((resolve) => setTimeout(resolve, 2500)),
-    ]);
-  } catch {
-    // Fall back to whatever serif / cursive the browser has.
-  }
+  const img = await loadImage('/brand/sip-society-daiquiri-depot.svg')
+    .catch(() => loadImage('/brand/sip-society-daiquiri-depot.webp'));
   const W = 1024;
-  const H = 900;
+  const H = 612;
   const c = canvas(W, H);
-  const ctx = c.getContext('2d')!;
-  const main = ink === 'dark' ? '#16121a' : 'rgba(255,255,255,.94)';
-  const pink = ink === 'dark' ? '#e2357f' : '#ff8fbe';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-
-  // Cup-and-S mark with its arc, like the shop sign.
-  ctx.strokeStyle = main;
-  ctx.lineWidth = 12;
-  ctx.beginPath();
-  ctx.arc(W / 2, 205, 118, Math.PI * 1.05, Math.PI * 1.95);
-  ctx.stroke();
-  ctx.strokeStyle = pink;
-  ctx.lineWidth = 7;
-  ctx.beginPath();
-  ctx.arc(W / 2, 205, 140, Math.PI * 1.12, Math.PI * 1.88);
-  ctx.stroke();
-  ctx.fillStyle = main;
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - 70, 110);
-  ctx.lineTo(W / 2 + 70, 110);
-  ctx.lineTo(W / 2 + 54, 285);
-  ctx.lineTo(W / 2 - 54, 285);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = pink;
-  ctx.lineWidth = 9;
-  ctx.beginPath();
-  ctx.moveTo(W / 2 + 18, 112);
-  ctx.lineTo(W / 2 + 46, 34);
-  ctx.stroke();
-  ctx.fillStyle = ink === 'dark' ? pink : '#2a1020';
-  ctx.font = '700 150px "Dancing Script", "Brush Script MT", cursive';
-  ctx.fillText('S', W / 2, 255);
-
-  ctx.fillStyle = main;
-  ctx.font = '800 152px "Fraunces", Georgia, serif';
-  ctx.fillText('SIP SOCIETY', W / 2, 470, W - 40);
-  ctx.fillStyle = pink;
-  ctx.fillRect(110, 528, 300, 8);
-  ctx.fillRect(W - 410, 528, 300, 8);
-  ctx.fillRect(W / 2 - 4, 498, 8, 68);
-  ctx.fillRect(W / 2 - 34, 528, 68, 8);
-  ctx.font = '700 170px "Dancing Script", "Brush Script MT", cursive';
-  ctx.fillText('Daiquiri Depot', W / 2, 720, W - 30);
+  const ctx = c.getContext('2d', { willReadFrequently: ink === 'light' })!;
+  const ratio = Math.min((W * 0.96) / img.naturalWidth, (H * 0.96) / img.naturalHeight);
+  const w = img.naturalWidth * ratio;
+  const h = img.naturalHeight * ratio;
+  ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+  if (ink === 'light') {
+    const data = ctx.getImageData(0, 0, W, H);
+    const px = data.data;
+    for (let i = 0; i < px.length; i += 4) {
+      if (!px[i + 3]) continue;
+      const lum = (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) / 255;
+      if (lum < 0.32) {
+        px[i] = 251;
+        px[i + 1] = 245;
+        px[i + 2] = 236;
+      }
+    }
+    ctx.putImageData(data, 0, 0);
+  }
   const t = texture(c);
   t.wrapS = THREE.ClampToEdgeWrapping;
   return t;
+}
+
+/** Cut lime wheel: rind, pith and juicy segments. */
+export function limeTexture() {
+  const S = 256;
+  const c = canvas(S, S);
+  const ctx = c.getContext('2d')!;
+  const m = S / 2;
+  ctx.fillStyle = '#4f8f2a';
+  ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = '#eef3d2';
+  ctx.beginPath();
+  ctx.arc(m, m, m * 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  const segments = 10;
+  for (let i = 0; i < segments; i += 1) {
+    const a0 = (i / segments) * Math.PI * 2 + 0.04;
+    const a1 = ((i + 1) / segments) * Math.PI * 2 - 0.04;
+    const g = ctx.createRadialGradient(m, m, m * 0.1, m, m, m * 0.8);
+    g.addColorStop(0, '#d9ea8a');
+    g.addColorStop(1, '#a9cf4a');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(m + Math.cos((a0 + a1) / 2) * m * 0.1, m + Math.sin((a0 + a1) / 2) * m * 0.1);
+    ctx.arc(m, m, m * 0.8, a0, a1);
+    ctx.closePath();
+    ctx.fill();
+  }
+  return texture(c);
 }

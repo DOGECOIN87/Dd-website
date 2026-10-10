@@ -78,45 +78,6 @@ export function cupGeometry(d: CupDims) {
   return lathe(shell(outer, d.wall), 96, 0, h);
 }
 
-/** Domed lid with a snap skirt, a stepped flange and an X-slot hole at the crown. */
-export function domeLidGeometry(d: CupDims) {
-  const R = sideR(d, sideTop(d));
-  const { h } = d;
-  const outer = [
-    V(R + 0.056, h - 0.065), V(R + 0.064, h - 0.03), V(R + 0.066, h + 0.028), V(R + 0.05, h + 0.05),
-    V(R + 0.004, h + 0.056), V(R - 0.03, h + 0.062), V(R - 0.04, h + 0.085),
-  ];
-  const r0 = R - 0.046;
-  const yb = h + 0.095;
-  const a = 0.66;
-  const n = 28;
-  for (let i = 1; i <= n; i += 1) {
-    const th = (i / n) * 1.3;
-    outer.push(V(r0 * Math.cos(th), yb + a * Math.sin(th)));
-  }
-  const crown = yb + a * Math.sin(1.3);
-  outer.push(V(0.15, crown + 0.012), V(0.1, crown + 0.008), V(0.085, crown - 0.012));
-  return lathe(shell(outer, 0.012), 96, h - 0.07, crown);
-}
-
-export const domeCrown = (d: CupDims) => d.h + 0.095 + 0.66 * Math.sin(1.3);
-
-/** Flat sip lid. `hole` 0 closes it (souffle cup lids). */
-export function flatLidGeometry(d: CupDims, hole: number) {
-  const R = sideR(d, sideTop(d));
-  const { h } = d;
-  const outer = [
-    V(R + 0.056, h - 0.065), V(R + 0.064, h - 0.03), V(R + 0.066, h + 0.028), V(R + 0.05, h + 0.05),
-    V(R + 0.004, h + 0.056), V(R - 0.03, h + 0.064), V(R - 0.05, h + 0.1), V(R - 0.1, h + 0.118),
-    V(R * 0.6, h + 0.13), V(R * 0.32, h + 0.137),
-  ];
-  if (hole > 0) outer.push(V(hole + 0.03, h + 0.14), V(hole, h + 0.125), V(hole - 0.006, h + 0.105));
-  else outer.push(V(0.12, h + 0.14), V(0, h + 0.14));
-  return lathe(shell(outer, 0.012), 96, h - 0.07, h + 0.14);
-}
-
-export const flatLidTop = (d: CupDims) => d.h + 0.14;
-
 /** Tall-cup texture height range; liquid textures map v = y / LIQUID_VMAX. */
 export const LIQUID_VMAX = 3.6;
 
