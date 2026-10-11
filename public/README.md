@@ -10,11 +10,12 @@ Brand:
 
 Photos:
 
-- `photos/layered-daiquiris.webp`: layered and swirled daiquiris at FM 306 (FM 306 card and social share image)
+- `photos/fm306-drive-thru.webp`: the FM 306 storefront and drive-thru (FM 306 card), colour-graded to the site palette with `scripts/grade-photo.py`
 - `photos/backyard-in-gruene-night.webp`: The Backyard in Gruene at night (Gruene card)
+- `photos/layered-daiquiris.webp`: layered and swirled daiquiris at FM 306 (social share image)
 - `photos/jugs-and-jello-shots.webp`: half-gallon jugs with jello shots and gummy bears (not currently used)
 
-Every photo on the site is a real photo of the business. Do not use AI-generated images. A real photo of the FM 306 storefront and drive-thru would be a good addition to the FM 306 card.
+Only add images the owner has approved, and avoid AI-generated imagery. Run bright, saturated photos through `scripts/grade-photo.py` so they sit with the site's cream and pink palette.
 
 Favicon and legacy monogram files are also here.
 

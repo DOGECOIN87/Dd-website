@@ -14,7 +14,6 @@ export interface CupDims {
 }
 
 export const TALL: CupDims = { h: 3, rTop: 0.98, rBot: 0.64, wall: 0.014 };
-export const SHOT: CupDims = { h: 0.74, rTop: 0.62, rBot: 0.47, wall: 0.012 };
 
 const V = (x: number, y: number) => new THREE.Vector2(x, y);
 const smooth = (a: number, b: number, x: number) => {

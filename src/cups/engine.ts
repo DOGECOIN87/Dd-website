@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceGeometry, liquidGeometry,
+  LIQUID_VMAX, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceGeometry, liquidGeometry,
   mulberry, sideR, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
@@ -487,8 +487,8 @@ class CupEngine {
   }
 
   private async build(spec: DrinkSpec) {
-    const shot = spec.kind === 'shot';
-    const d = shot ? SHOT : TALL;
+    // Every drink comes in the same cup; only what is inside changes.
+    const d = TALL;
     const seed = hashString(specKey(spec));
     const rand = mulberry(seed);
     const group = new THREE.Group();
@@ -499,7 +499,6 @@ class CupEngine {
       this.cupGeo.set(d, geo);
     }
     const shadow = this.shadow.clone();
-    shadow.scale.setScalar(d.rTop / TALL.rTop);
     if (spec.kind === 'empty' || spec.clear) {
       // Light passes through a clear cup: its shadow is faint.
       shadow.material = (shadow.material as THREE.MeshBasicMaterial).clone();
@@ -513,11 +512,10 @@ class CupEngine {
         case 'frozen': return { top: d.h - 0.08, mound: 0.38 };
         case 'latte': return { top: d.h - 0.12 };
         case 'boba': return { top: d.h - 0.18, pearlZone: 0.85 };
-        case 'shot': return { top: d.h * 0.7 };
         default: return { top: d.h - 0.22 };
       }
     })();
-    const vMax = shot ? d.h * 1.2 : LIQUID_VMAX;
+    const vMax = LIQUID_VMAX;
     if (spec.clear) {
       const water = clearPlastic(new THREE.MeshPhysicalMaterial({
         color: spec.colors[0] ?? '#eef7fb', roughness: 0.03, transmission: 1, thickness: 1.4, ior: 1.33,
@@ -529,7 +527,7 @@ class CupEngine {
         ? { roughness: 0.48, clearcoat: 0.55, clearcoatRoughness: 0.22, sheen: 0.5, sheenRoughness: 0.55, sheenColor: new THREE.Color('#ffffff'), normalMap: this.slush, normalScale: new THREE.Vector2(0.2, 0.2) }
         : spec.jello
           ? { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05 }
-          : spec.kind === 'soda' || spec.kind === 'shot'
+          : spec.kind === 'soda'
             ? { roughness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.1 }
             : { roughness: 0.32, clearcoat: 0.35, clearcoatRoughness: 0.3 };
       const material = drinkShading(new THREE.MeshPhysicalMaterial({ map: liquidTexture(spec, shape.top, seed, vMax), ...finish }), spec.kind === 'frozen' ? 0.5 : 0.35);
@@ -565,16 +563,22 @@ class CupEngine {
     if (spec.gummies) {
       const colors = ['#e8434f', '#f7c443', '#5fbf4a', '#f28a2e', '#f6f0e4', '#d8366f'];
       const matG = new THREE.MeshPhysicalMaterial({ roughness: 0.22, clearcoat: 0.8, clearcoatRoughness: 0.15, sheen: 0.4, sheenRoughness: 0.4 });
-      const n = 22;
-      const gummies = new THREE.InstancedMesh(gummyBearGeometry(), matG, n);
-      for (let i = 0; i < n; i += 1) {
-        const y = 0.12 + (i / n) * 0.42 + rand() * 0.05;
-        const r = (sideR(d, y) - 0.15) * Math.sqrt(rand());
+      // Real-size bears (about 2 cm) loosely filling the bottom third of the cup, few overlapping.
+      const placed: THREE.Vector3[] = [];
+      for (let tries = 0; tries < 900 && placed.length < 70; tries += 1) {
+        const y = 0.16 + rand() ** 1.3 * 0.95;
+        const r = (sideR(d, y) - d.wall - 0.16) * Math.sqrt(rand());
         const a = rand() * Math.PI * 2;
-        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
-        gummies.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r), q, new THREE.Vector3(0.24, 0.24, 0.24)));
-        gummies.setColorAt(i, new THREE.Color(colors[i % colors.length]));
+        const p = new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
+        if (placed.every((q) => q.distanceTo(p) > 0.25)) placed.push(p);
       }
+      const gummies = new THREE.InstancedMesh(gummyBearGeometry(), matG, placed.length);
+      placed.forEach((p, i) => {
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
+        const s = 0.36 + rand() * 0.05;
+        gummies.setMatrixAt(i, new THREE.Matrix4().compose(p, q, new THREE.Vector3(s, s, s)));
+        gummies.setColorAt(i, new THREE.Color(colors[i % colors.length]));
+      });
       group.add(gummies);
     }
 
@@ -623,7 +627,7 @@ class CupEngine {
     const cold = spec.kind === 'empty' ? 0 : Math.min(shape.top, d.h - 0.2);
     group.add(new THREE.Mesh(geo, this.cupMaterial(d, cold)));
 
-    if (spec.logo ?? !shot) {
+    if (spec.logo !== false) {
       const { material, aspect } = await this.printMaterial(d, cold, spec.kind === 'empty' || !!spec.clear);
       const height = PRINT_WIDTH / aspect;
       const decal = new THREE.Mesh(
@@ -633,10 +637,6 @@ class CupEngine {
       group.add(decal);
     }
 
-    if (shot) {
-      group.scale.setScalar(1.65);
-      group.position.y = 1.05;
-    }
     return group;
   }
 }

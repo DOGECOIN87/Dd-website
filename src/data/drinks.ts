@@ -39,10 +39,10 @@ const cocktails: Record<string, DrinkSpec> = {
 };
 
 const extras: Record<string, DrinkSpec> = {
-  'Pickle Shot': { kind: 'shot', colors: ['#c3cc63', '#aeb84f'] },
-  'Jello Shot': { kind: 'shot', colors: ['#e8434f', '#d32f3f'], jello: true },
-  'Tipsy Bears': { kind: 'shot', colors: [], gummies: true },
-  'Gummy Bears': { kind: 'shot', colors: [], gummies: true },
+  'Pickle Shot': { kind: 'soda', colors: ['#c3cc63', '#aeb84f'] },
+  'Jello Shot': { kind: 'soda', colors: ['#e8434f', '#d32f3f'], jello: true },
+  'Tipsy Bears': { kind: 'empty', colors: [], gummies: true },
+  'Gummy Bears': { kind: 'empty', colors: [], gummies: true },
   Water: { kind: 'soda', colors: ['#e6f3f8'], ice: true, clear: true },
   'Extra Cup': { kind: 'empty', colors: [] },
 };

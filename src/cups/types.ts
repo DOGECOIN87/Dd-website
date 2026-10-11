@@ -1,14 +1,14 @@
 /**
- * Describes one drink for the 3D cup renderer. Every field is optional except
- * `kind` and `colors`; sensible defaults come from the kind.
+ * Describes one drink for the 3D cup renderer. Every drink is shown in the same clear
+ * 24 oz cup; only what is inside changes. Every field is optional except `kind` and
+ * `colors`; sensible defaults come from the kind.
  */
 export type CupKind =
   | 'frozen' // slushy daiquiri / smoothie heaped above the rim
   | 'latte' // iced coffee
   | 'boba' // milk tea with tapioca pearls
-  | 'soda' // dirty soda / still drinks over ice
-  | 'shot' // 2 oz souffle cup (jello shots, pickle shots, gummies)
-  | 'empty'; // just the cup
+  | 'soda' // dirty soda / still drinks over ice, pickle and jello shots
+  | 'empty'; // just the cup (or a cup of gummy bears)
 
 export interface DrinkSpec {
   kind: CupKind;
@@ -28,7 +28,7 @@ export interface DrinkSpec {
   clear?: boolean;
   /** Glossy set gelatin instead of a liquid (jello shots). */
   jello?: boolean;
-  /** Print the Sip Society + Daiquiri depot logo on the cup. Defaults to true for tall cups. */
+  /** Print the Sip Society + Daiquiri depot logo on the cup. Defaults to true. */
   logo?: boolean;
 }
 
