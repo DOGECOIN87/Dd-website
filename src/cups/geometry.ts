@@ -14,6 +14,8 @@ export interface CupDims {
 }
 
 export const TALL: CupDims = { h: 3, rTop: 0.98, rBot: 0.64, wall: 0.014 };
+/** The small shot cup the gummy bears come in. */
+export const SHOT: CupDims = { h: 0.74, rTop: 0.62, rBot: 0.47, wall: 0.012 };
 
 const V = (x: number, y: number) => new THREE.Vector2(x, y);
 const smooth = (a: number, b: number, x: number) => {
@@ -87,6 +89,8 @@ export interface LiquidShape {
   top: number;
   /** Height of the heaped slush above `top` (frozen drinks). */
   mound?: number;
+  /** How far a liquid surface bulges above `top`: 0.042 for a cup filled to the brim (the default), 0.016 for a plain meniscus. */
+  dome?: number;
   /** Narrow the drink below this height so tapioca pearls can sit against the wall. */
   pearlZone?: number;
 }
@@ -116,9 +120,10 @@ export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMA
     }
   } else {
     // Filled to the brim: the surface bulges a little above where it meets the wall, as in a full cup.
+    const dome = shape.dome ?? 0.042;
     points.push(
-      V(rTop - 0.01, shape.top + 0.018), V(rTop - 0.03, shape.top + 0.03), V(rTop - 0.08, shape.top + 0.038),
-      V(rTop * 0.5, shape.top + 0.042), V(0, shape.top + 0.042),
+      V(rTop - 0.01, shape.top + dome * 0.43), V(rTop - 0.03, shape.top + dome * 0.71), V(rTop - 0.08, shape.top + dome * 0.9),
+      V(rTop * 0.5, shape.top + dome), V(0, shape.top + dome),
     );
   }
   const geo = lathe(points, 128, 0, vMax);

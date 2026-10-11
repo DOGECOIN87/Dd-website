@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  LIQUID_VMAX, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceGeometry, liquidGeometry,
+  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceGeometry, liquidGeometry,
   mulberry, sideR, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
@@ -565,8 +565,10 @@ class CupEngine {
 
   private async build(spec: DrinkSpec) {
     if (spec.container === 'half-gallon' || spec.container === 'gallon') return this.buildJug(spec, spec.container);
-    // Every drink comes in the same cup; only what is inside changes.
-    const d = TALL;
+    // Every drink comes in the same cup; only what is inside changes. Gummy bears come in the small
+    // shot cup the owner had before (no print).
+    const shot = !!spec.gummies;
+    const d = shot ? SHOT : TALL;
     const seed = hashString(specKey(spec));
     const rand = mulberry(seed);
     const group = new THREE.Group();
@@ -577,7 +579,7 @@ class CupEngine {
       this.cupGeo.set(d, geo);
     }
     const shadow = this.shadow.clone();
-    if (spec.kind === 'empty' || spec.clear) {
+    if ((spec.kind === 'empty' && !shot) || spec.clear) {
       // Light passes through a clear cup: its shadow is faint.
       shadow.material = (shadow.material as THREE.MeshBasicMaterial).clone();
       (shadow.material as THREE.MeshBasicMaterial).opacity = 0.45;
@@ -590,7 +592,8 @@ class CupEngine {
       switch (spec.kind) {
         case 'frozen': return { top: d.h - 0.08, mound: 0.38 };
         case 'boba': return { top: d.h - 0.05, pearlZone: 0.85 };
-        default: return { top: d.h - 0.05 };
+        // Iced drinks sit a little lower, so the floating cubes show without rising above the rim.
+        default: return spec.ice ? { top: d.h - 0.09, dome: 0.016 } : { top: d.h - 0.05 };
       }
     })();
     const vMax = LIQUID_VMAX;
@@ -634,22 +637,16 @@ class CupEngine {
     if (spec.gummies) {
       const colors = ['#e8434f', '#f7c443', '#5fbf4a', '#f28a2e', '#f6f0e4', '#d8366f'];
       const matG = new THREE.MeshPhysicalMaterial({ roughness: 0.22, clearcoat: 0.8, clearcoatRoughness: 0.15, sheen: 0.4, sheenRoughness: 0.4 });
-      // Real-size bears (about 2 cm) loosely filling the bottom third of the cup, few overlapping.
-      const placed: THREE.Vector3[] = [];
-      for (let tries = 0; tries < 900 && placed.length < 70; tries += 1) {
-        const y = 0.16 + rand() ** 1.3 * 0.95;
-        const r = (sideR(d, y) - d.wall - 0.16) * Math.sqrt(rand());
+      const n = 22;
+      const gummies = new THREE.InstancedMesh(gummyBearGeometry(), matG, n);
+      for (let i = 0; i < n; i += 1) {
+        const y = 0.12 + (i / n) * 0.42 + rand() * 0.05;
+        const r = (sideR(d, y) - 0.15) * Math.sqrt(rand());
         const a = rand() * Math.PI * 2;
-        const p = new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r);
-        if (placed.every((q) => q.distanceTo(p) > 0.25)) placed.push(p);
-      }
-      const gummies = new THREE.InstancedMesh(gummyBearGeometry(), matG, placed.length);
-      placed.forEach((p, i) => {
         const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
-        const s = 0.36 + rand() * 0.05;
-        gummies.setMatrixAt(i, new THREE.Matrix4().compose(p, q, new THREE.Vector3(s, s, s)));
+        gummies.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r), q, new THREE.Vector3(0.24, 0.24, 0.24)));
         gummies.setColorAt(i, new THREE.Color(colors[i % colors.length]));
-      });
+      }
       group.add(gummies);
     }
 
@@ -669,16 +666,19 @@ class CupEngine {
     }
 
     if (spec.ice) {
-      // Cubes floating at the surface, a couple heaped above it, as in a fresh pour.
+      // Cubes floating at the surface, a ring and one in the middle, each with its highest corner
+      // just under the rim: never above it.
       const { geos, mat } = this.iceKit();
-      for (let i = 0; i < 10; i += 1) {
-        const upper = i >= 7;
-        const a = (i / 7) * Math.PI * 2 + rand() * 0.6;
-        const r = upper ? 0.08 + rand() * 0.24 : i === 6 ? 0.05 : 0.36 + rand() * 0.16;
+      const box = new THREE.Box3();
+      for (let i = 0; i < 7; i += 1) {
+        const a = (i / 6) * Math.PI * 2 + (rand() - 0.5) * 0.25;
+        const r = i === 6 ? 0.04 : 0.56 + rand() * 0.06;
         const cube = new THREE.Mesh(geos[i % geos.length], mat);
         cube.scale.set(0.3 + rand() * 0.07, 0.27 + rand() * 0.07, 0.3 + rand() * 0.07);
-        cube.position.set(Math.cos(a) * r, shape.top + (upper ? 0.3 + rand() * 0.1 : 0.06 + rand() * 0.04), Math.sin(a) * r);
-        cube.rotation.set((rand() - 0.5) * 0.7, rand() * 3, (rand() - 0.5) * 0.7);
+        cube.rotation.set((rand() - 0.5) * 0.5, rand() * 3, (rand() - 0.5) * 0.5);
+        cube.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+        box.setFromObject(cube);
+        cube.position.y = d.h - 0.005 - rand() * 0.02 - box.max.y;
         group.add(cube);
       }
       // In a clear drink you can see the rest of the ice packed below the surface.
@@ -694,11 +694,12 @@ class CupEngine {
       }
     }
 
-    // The cup itself: every drink's cup mists the same way as the frozen daiquiri's. An empty cup stays dry.
-    const cold = spec.kind === 'empty' ? 0 : COLD_TOP;
+    // The cup itself: every drink's cup mists the same way as the frozen daiquiri's. An empty cup stays
+    // dry; the shot cup keeps the light mist it had before.
+    const cold = shot ? d.h * 0.7 : spec.kind === 'empty' ? 0 : COLD_TOP;
     group.add(new THREE.Mesh(geo, this.cupMaterial(d, cold)));
 
-    if (spec.logo !== false) {
+    if (spec.logo ?? !shot) {
       const { material, aspect } = await this.printMaterial(d, cold, spec.kind === 'empty' || !!spec.clear);
       const height = PRINT_WIDTH / aspect;
       const decal = new THREE.Mesh(
@@ -708,6 +709,10 @@ class CupEngine {
       group.add(decal);
     }
 
+    if (shot) {
+      group.scale.setScalar(1.65);
+      group.position.y = 1.05;
+    }
     return group;
   }
 }
