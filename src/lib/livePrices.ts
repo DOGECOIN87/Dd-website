@@ -33,6 +33,7 @@ export function useLivePrices() {
 export const toastGuid = (itemPath: string) => itemPath.slice(itemPath.lastIndexOf('_') + 1);
 
 const money = (n: number) => `$${n.toFixed(2)}`;
+const sizeKey = (s: string) => s.toLowerCase().replace('½', '1/2').replace(/[^a-z0-9/]/g, '');
 
 /**
  * The price to show on a menu card: live Toast data when available, otherwise the
@@ -40,6 +41,11 @@ const money = (n: number) => `$${n.toFixed(2)}`;
  */
 export function priceFor(item: MenuItem, live: Record<string, LivePrice> | null): { label: string; detail?: string } {
   const entry = live?.[toastGuid(item.itemPath)];
+  if (item.size) {
+    // A size card (the jugs): that size's live price if Toast lists it, else the published one.
+    const match = entry?.sizes.find((s) => sizeKey(s.name) === sizeKey(item.size!));
+    return { label: match ? money(match.price) : item.price };
+  }
   if (entry) {
     if (entry.price !== null) return { label: money(entry.price) };
     if (entry.sizes.length) {

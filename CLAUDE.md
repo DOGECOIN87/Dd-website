@@ -9,6 +9,10 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
 
 - One cup design everywhere: the open, lidless clear 24 oz cup of the hero's first drink. Every item, party
   favors and empty cups included, uses it; only the contents change. No straws, no fruit garnishes.
+- The jugs (`src/cups/jugs.ts`): half-gallon and gallon, the same clear plastic as the cups (the owner chose
+  clear over milky), a blue ribbed screw cap from the owner's reference, and the black print. Filled to the
+  neck for the "½ Gallon Jug" and "Gallon Jug" menu cards, empty for the set-up extras. The gallon model is
+  CC BY 4.0 (boost5u): keep the footer credit.
 - The cup print is the Sip Society + Daiquiri depot logo in black, one colour
   (`public/brand/cup-print.webp`, built by `scripts/build-cup-print.py`). The navbar and footer keep the
   full-colour logo.

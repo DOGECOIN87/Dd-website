@@ -20,6 +20,8 @@ export interface MenuItem {
   itemPath: string;
   description?: string;
   alcoholic?: boolean;
+  /** A daiquiri size sold as its own card (the jugs): its price is that size's price. */
+  size?: string;
 }
 
 const signature = (name: string, flavors: Flavor[], itemPath: string): MenuItem => ({
@@ -41,6 +43,15 @@ export const addons = [
 ] as const;
 
 export const menuItems: MenuItem[] = [
+  // Take-home jugs: any daiquiri, ordered through Build Your Own, where the size is picked.
+  {
+    name: '½ Gallon Jug', category: 'signatures', price: '$22', size: '½ gallon', alcoholic: true,
+    itemPath: 'item-build-your-own_1f404335-9bea-4bde-bda3-eac7deee3d38', description: 'Any daiquiri, layered or swirled, in a capped half-gallon jug to go.',
+  },
+  {
+    name: 'Gallon Jug', category: 'signatures', price: '$40', size: 'Gallon', alcoholic: true,
+    itemPath: 'item-build-your-own_1f404335-9bea-4bde-bda3-eac7deee3d38', description: 'A full gallon of any daiquiri for the party, capped to go.',
+  },
   signature('All American', ['Strawberry', 'Piña Colada', 'Hypnotic'], 'item-all-american_f1ba0da1-3582-400c-bdd6-73f46f9d4571'),
   signature('Bahama Mama', ['Hypnotic', 'Margarita', 'Peach'], 'item-bahama-mama_88ac7beb-008e-45ec-9ee2-55f93dd6d1ec'),
   signature('Cactus Juice', ['Peach', 'Margarita'], 'item-cactus-juice_586151c0-03e3-4a36-86d8-b4c8b9848824'),

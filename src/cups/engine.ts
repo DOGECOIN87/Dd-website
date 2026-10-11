@@ -4,7 +4,7 @@ import {
   mulberry, sideR, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
-import { JUG_SCALE, loadJugs } from './jugs';
+import { JUG_SCALE, loadJugs, type JugSize } from './jugs';
 import { condensationMaps, iceNormalMap, liquidTexture, printTexture, shadowTexture, slushNormalMap } from './textures';
 import { specKey, type DrinkSpec } from './types';
 
@@ -512,28 +512,56 @@ class CupEngine {
   }
 
   /** An empty, capped half-gallon or gallon jug with the print on the panel facing the viewer. */
-  private async buildJug(size: 'half-gallon' | 'gallon') {
+  /** The drink's surface finish: wet, crystalline slush for frozen drinks, glossy for the rest. */
+  private drinkMaterial(spec: DrinkSpec, map: THREE.Texture, clip?: THREE.Plane) {
+    const finish = spec.kind === 'frozen'
+      ? { roughness: 0.48, clearcoat: 0.55, clearcoatRoughness: 0.22, sheen: 0.5, sheenRoughness: 0.55, sheenColor: new THREE.Color('#ffffff'), normalMap: this.slush, normalScale: new THREE.Vector2(0.2, 0.2) }
+      : spec.jello
+        ? { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05 }
+        : spec.kind === 'soda'
+          ? { roughness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.1 }
+          : { roughness: 0.32, clearcoat: 0.35, clearcoatRoughness: 0.3 };
+    return drinkShading(
+      new THREE.MeshPhysicalMaterial({ map, ...finish, clippingPlanes: clip ? [clip] : null }),
+      spec.kind === 'frozen' ? 0.5 : 0.35,
+    );
+  }
+
+  /**
+   * A capped half-gallon or gallon jug with the print on the panel facing the viewer: empty
+   * for the set-up items, or filled to the neck with the drink.
+   */
+  private async buildJug(spec: DrinkSpec, size: JugSize) {
     this.print ??= printTexture();
     const { aspect } = await this.print;
     const jug = (await loadJugs(aspect))[size];
+    const filled = spec.kind !== 'empty' && spec.colors.length > 0;
     const group = new THREE.Group();
     const shadow = this.shadow.clone();
     shadow.scale.setScalar(size === 'gallon' ? 1.2 : 0.95);
-    shadow.material = (shadow.material as THREE.MeshBasicMaterial).clone();
-    (shadow.material as THREE.MeshBasicMaterial).opacity = 0.45; // light passes through a clear jug
+    if (!filled) {
+      shadow.material = (shadow.material as THREE.MeshBasicMaterial).clone();
+      (shadow.material as THREE.MeshBasicMaterial).opacity = 0.45; // light passes through an empty clear jug
+    }
     group.add(shadow);
     const jugGroup = new THREE.Group();
     jugGroup.scale.setScalar(JUG_SCALE);
     const [plastic, capMaterial] = this.jugMaterials(jug.capY * JUG_SCALE);
     jugGroup.add(new THREE.Mesh(jug.body, plastic), new THREE.Mesh(jug.cap, capMaterial));
-    const { material } = await this.printMaterial(TALL, 0, true);
+    if (filled) {
+      const fill = jug.fillY * JUG_SCALE;
+      const map = liquidTexture(spec, fill, hashString(specKey(spec)), LIQUID_VMAX);
+      const drink = this.drinkMaterial(spec, map, new THREE.Plane(new THREE.Vector3(0, -1, 0), fill));
+      jugGroup.add(new THREE.Mesh(jug.drink, drink), new THREE.Mesh(jug.drinkTop, drink));
+    }
+    const { material } = await this.printMaterial(TALL, 0, !filled);
     jugGroup.add(new THREE.Mesh(jug.print, material));
     group.add(jugGroup);
     return group;
   }
 
   private async build(spec: DrinkSpec) {
-    if (spec.container === 'half-gallon' || spec.container === 'gallon') return this.buildJug(spec.container);
+    if (spec.container === 'half-gallon' || spec.container === 'gallon') return this.buildJug(spec, spec.container);
     // Every drink comes in the same cup; only what is inside changes.
     const d = TALL;
     const seed = hashString(specKey(spec));
@@ -570,14 +598,7 @@ class CupEngine {
       }), 0.015);
       group.add(new THREE.Mesh(liquidGeometry(d, shape, vMax, seed), water));
     } else if (spec.kind !== 'empty' && !spec.gummies) {
-      const finish = spec.kind === 'frozen'
-        ? { roughness: 0.48, clearcoat: 0.55, clearcoatRoughness: 0.22, sheen: 0.5, sheenRoughness: 0.55, sheenColor: new THREE.Color('#ffffff'), normalMap: this.slush, normalScale: new THREE.Vector2(0.2, 0.2) }
-        : spec.jello
-          ? { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05 }
-          : spec.kind === 'soda'
-            ? { roughness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.1 }
-            : { roughness: 0.32, clearcoat: 0.35, clearcoatRoughness: 0.3 };
-      const material = drinkShading(new THREE.MeshPhysicalMaterial({ map: liquidTexture(spec, shape.top, seed, vMax), ...finish }), spec.kind === 'frozen' ? 0.5 : 0.35);
+      const material = this.drinkMaterial(spec, liquidTexture(spec, shape.top, seed, vMax));
       group.add(new THREE.Mesh(liquidGeometry(d, shape, vMax, seed), material));
     }
 

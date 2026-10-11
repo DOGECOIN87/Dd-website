@@ -12,7 +12,7 @@ export type CupKind =
 
 export interface DrinkSpec {
   kind: CupKind;
-  /** The container: the standard cup unless this is a jug. Jugs are shown empty, capped. */
+  /** The container: the standard cup unless this is a jug. A jug with no colours is shown empty. */
   container?: 'cup' | 'half-gallon' | 'gallon';
   /** Drink colors, top to bottom. */
   colors: string[];

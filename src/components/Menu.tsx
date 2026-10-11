@@ -51,7 +51,7 @@ export function Menu() {
           </div>
           {(tab === 'signatures' || tab === 'classics') && <div className="flavor-filter"><span><SlidersHorizontal size={16} /> Filter by every flavor:</span>{(Object.keys(flavorColors) as Flavor[]).map((flavor) => <button key={flavor} className={selected.includes(flavor) ? 'selected' : ''} aria-pressed={selected.includes(flavor)} onClick={() => toggleFlavor(flavor)}><i style={{ backgroundColor: flavorColors[flavor] }} />{flavor}</button>)}{selected.length > 0 && <button className="clear-filter" onClick={() => setSelected([])}><X size={14} /> Clear</button>}</div>}
         </div>
-        {shownItems.length ? <div className="drink-grid">{shownItems.map((item) => <DrinkCard item={item} live={live} key={item.itemPath} />)}</div> : <div className="empty-menu"><Check size={22} /> No drink has every selected flavor. Try clearing one.</div>}
+        {shownItems.length ? <div className="drink-grid">{shownItems.map((item) => <DrinkCard item={item} live={live} key={`${item.category}:${item.name}`} />)}</div> : <div className="empty-menu"><Check size={22} /> No drink has every selected flavor. Try clearing one.</div>}
       </div>
     </section>
   );

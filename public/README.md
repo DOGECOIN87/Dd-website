@@ -8,6 +8,10 @@ Brand:
 - `brand/backyard-in-gruene.webp`: The Backyard in Gruene round guitar logo
 - `brand/now-in-2-locations.webp`: "Now in 2 locations" social graphic
 
+3D models:
+
+- `models/gallon-jug.glb`: "Milk 1 gallon jug from USA" by boost5u (https://sketchfab.com/3d-models/milk-1-gallon-jug-from-usa-7e64723df1854c5b8d45419fe86d96b5), CC BY 4.0, slimmed and smoothed by `scripts/slim-gallon-glb.py`. The credit in the site footer is required by the licence; keep it.
+
 Photos:
 
 - `photos/fm306-drive-thru.webp`: the FM 306 storefront and drive-thru (FM 306 card), colour-graded to the site palette with `scripts/grade-photo.py`

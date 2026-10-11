@@ -49,8 +49,15 @@ const extras: Record<string, DrinkSpec> = {
   'Extra gallon set up': { kind: 'empty', colors: [], container: 'gallon' },
 };
 
+/** The take-home jugs, filled: the half-gallon like the shop's own (strawberry over piña colada). */
+const jugs: Record<string, DrinkSpec> = {
+  '½ Gallon Jug': { kind: 'frozen', colors: [flavorColors.Strawberry, flavorColors['Piña Colada']], container: 'half-gallon' },
+  'Gallon Jug': { kind: 'frozen', colors: ['#e8434f', '#f7c443', '#3f9fdc'], container: 'gallon' },
+};
+
 /** Picks the cup, colours and toppings that represent a menu item. */
 export function specForItem(item: MenuItem): DrinkSpec {
+  if (jugs[item.name]) return jugs[item.name];
   if (cocktails[item.name]) return cocktails[item.name];
   if (extras[item.name]) return extras[item.name];
   if (item.category === 'extras') return { kind: 'empty', colors: [] };

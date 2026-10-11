@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { LIQUID_VMAX } from './geometry';
 
 /**
  * Half-gallon and gallon jugs. The gallon is "Milk 1 gallon jug from USA" by boost5u
@@ -24,6 +25,11 @@ export interface Jug {
   cap: THREE.BufferGeometry;
   /** The logo print, conformed to the side panel that faces -z (away from the handle). */
   print: THREE.BufferGeometry;
+  /** The drink filling the jug (its material clips at `fillY`) and the disc closing it at the neck. */
+  drink: THREE.BufferGeometry;
+  drinkTop: THREE.BufferGeometry;
+  /** Height of the drink's surface, in metres: the base of the neck. */
+  fillY: number;
 }
 
 const smooth = (a: number, b: number, x: number) => {
@@ -33,6 +39,12 @@ const smooth = (a: number, b: number, x: number) => {
 
 /** Height where the gallon's cap begins (the neck ring sits just below it). */
 const GALLON_CAP_Y = 0.2355;
+
+/** A full jug is filled to the base of the neck, where the neck is round and about 2 cm across. */
+const GALLON_FILL_Y = 0.229;
+const NECK_INNER_R = 0.0195;
+/** Jug wall thickness (HDPE/PET jugs are well under a millimetre; this keeps the drink clear of the wall). */
+const WALL = 0.0012;
 
 /** Half-gallon from the gallon: the body narrows to 76.5 %, easing back to full width at the neck. */
 const HALF = { width: 0.765, height: 0.97, neckFrom: 0.205, neckTo: 0.232 };
@@ -97,6 +109,43 @@ function capGeometry(capY: number, top: number) {
 }
 
 /**
+ * The drink inside a jug: the jug's surface pulled in by the wall, as separate triangles with
+ * UVs for the drink texture (u around the jug, v = height in scene units / LIQUID_VMAX, as in
+ * the cups). The texture's seam is at the back (+z, the handle side); triangles that cross it
+ * get their u unwrapped so they don't smear the whole texture.
+ */
+function drinkVolume(geo: THREE.BufferGeometry) {
+  const out = geo.toNonIndexed();
+  const pos = out.attributes.position;
+  const nrm = out.attributes.normal;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i += 1) {
+    const x = pos.getX(i) - nrm.getX(i) * WALL;
+    const y = pos.getY(i) - nrm.getY(i) * WALL;
+    const z = pos.getZ(i) - nrm.getZ(i) * WALL;
+    pos.setXYZ(i, x, y, z);
+    uv[i * 2] = Math.atan2(-x, -z) / (Math.PI * 2) + 0.5;
+    uv[i * 2 + 1] = (y * JUG_SCALE) / LIQUID_VMAX;
+  }
+  for (let t = 0; t < pos.count; t += 3) {
+    const us = [uv[t * 2], uv[t * 2 + 2], uv[t * 2 + 4]];
+    if (Math.max(...us) - Math.min(...us) > 0.5) for (let k = 0; k < 3; k += 1) if (us[k] < 0.5) uv[(t + k) * 2] += 1;
+  }
+  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return out;
+}
+
+/** The drink's surface at the base of the neck, textured with the top of the drink. */
+function drinkTop(fillY: number) {
+  const disc = new THREE.CircleGeometry(NECK_INNER_R, 48);
+  disc.rotateX(-Math.PI / 2);
+  disc.translate(0, fillY - 0.0002, 0);
+  const uv = disc.attributes.uv;
+  for (let i = 0; i < uv.count; i += 1) uv.setXY(i, uv.getX(i), ((fillY - 0.004) * JUG_SCALE) / LIQUID_VMAX);
+  return disc;
+}
+
+/**
  * A grid for the logo, laid on the outermost surface of the -z side panel: each vertex is
  * dropped onto the jug along z, so the print follows the panel's slight curve.
  */
@@ -154,14 +203,17 @@ async function load(aspect: number) {
   gallon.computeBoundingBox();
   const top = gallon.boundingBox!.max.y;
   const halfCapY = GALLON_CAP_Y * HALF.height;
+  const halfFillY = GALLON_FILL_Y * HALF.height;
   const jugs: Record<JugSize, Jug> = {
     gallon: {
       body: belowCap(gallon, GALLON_CAP_Y), capY: GALLON_CAP_Y, cap: capGeometry(GALLON_CAP_Y, top),
       print: printOn(gallon, 0.1, 0.098, aspect),
+      drink: drinkVolume(gallon), drinkTop: drinkTop(GALLON_FILL_Y), fillY: GALLON_FILL_Y,
     },
     'half-gallon': {
       body: belowCap(half, halfCapY), capY: halfCapY, cap: capGeometry(halfCapY, top * HALF.height),
       print: printOn(half, 0.078, 0.098 * HALF.height, aspect),
+      drink: drinkVolume(half), drinkTop: drinkTop(halfFillY), fillY: halfFillY,
     },
   };
   return jugs;
