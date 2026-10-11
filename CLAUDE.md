@@ -7,8 +7,8 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
 
 ## Owner's decisions (keep these unless the owner says otherwise)
 
-- One cup design everywhere: the open, lidless clear 24 oz cup of the hero's first drink. Every item, party
-  favors and empty cups included, uses it; only the contents change. No straws, no fruit garnishes.
+- One cup design everywhere: the open, lidless clear 24 oz cup of the hero's first drink. Every item, empty
+  cups included, uses it (except the shot cup below); only the contents change. No straws, no fruit garnishes.
   Every drink fills the cup to the brim, as the frozen daiquiris do. The owner rejected cups with an empty
   band of plastic under the rim. The frozen drinks' cups mist below `COLD_TOP` (`engine.ts`) with beads of
   condensation; every other drink's cup looks like the water cup, as the owner asked: an even, smooth mist
@@ -17,8 +17,10 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
   Empty cups stay dry, since misted plastic makes them nearly invisible. Ice never rises above the rim: coloured iced
   drinks (dirty soda, sangria, Bloody Mary) fill to the brim like the rest, their ice showing against
   the wall; only the water sits a little lower, with three cubes floating under the rim.
-- The one exception: Tipsy Bears and Gummy Bears come in the small, wide shot cup (`SHOT` in
-  `geometry.ts`) with no print, the older design the owner asked to keep for the gummy bears.
+- The one exception: Pickle Shot, Jello Shot, Tipsy Bears and Gummy Bears come in the small, wide shot cup
+  (`container: 'shot'` in `drinks.ts`, `SHOT` in `geometry.ts`), with no print and the shots filled about two
+  thirds. This is the older design the owner had; moving the shots into the tall cup was never their
+  instruction, so don't change it without asking.
 - The jugs (`src/cups/jugs.ts`): half-gallon and gallon, the same clear plastic as the cups (the owner chose
   clear over milky), a blue ribbed screw cap from the owner's reference, and the black print. Filled to the
   neck for the "½ Gallon Jug" and "Gallon Jug" menu cards, empty for the set-up extras. The gallon model is

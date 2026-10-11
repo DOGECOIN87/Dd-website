@@ -565,9 +565,9 @@ class CupEngine {
 
   private async build(spec: DrinkSpec) {
     if (spec.container === 'half-gallon' || spec.container === 'gallon') return this.buildJug(spec, spec.container);
-    // Every drink comes in the same cup; only what is inside changes. Gummy bears come in the small
-    // shot cup the owner had before (no print).
-    const shot = !!spec.gummies;
+    // Every drink comes in the same cup; only what is inside changes. The shots and gummy bears come in
+    // the small shot cup the owner had before (no print).
+    const shot = spec.container === 'shot';
     const d = shot ? SHOT : TALL;
     const seed = hashString(specKey(spec));
     const rand = mulberry(seed);
@@ -589,6 +589,7 @@ class CupEngine {
     // The drink. Every cup is filled to the brim, like the frozen daiquiris, so no empty band of cup
     // shows under the rim; only what is inside differs.
     const shape: LiquidShape = (() => {
+      if (shot) return { top: d.h * 0.7, dome: 0.016 }; // a shot: filled about two thirds, as before
       switch (spec.kind) {
         case 'frozen': return { top: d.h - 0.08, mound: 0.38 };
         case 'boba': return { top: d.h - 0.05, pearlZone: 0.85 };
@@ -596,7 +597,7 @@ class CupEngine {
         default: return spec.ice && spec.clear ? { top: d.h - 0.09, dome: 0.016 } : { top: d.h - 0.05 };
       }
     })();
-    const vMax = LIQUID_VMAX;
+    const vMax = shot ? d.h * 1.2 : LIQUID_VMAX;
     if (spec.clear) {
       const water = clearPlastic(new THREE.MeshPhysicalMaterial({
         color: spec.colors[0] ?? '#eef7fb', roughness: 0.03, transmission: 1, thickness: 1.4, ior: 1.33,
