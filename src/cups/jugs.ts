@@ -6,7 +6,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
  * (CC BY 4.0, credited in the site footer), slimmed by scripts/slim-gallon-glb.py into
  * public/models/gallon-jug.glb: metres, y up, origin at the centre of the base, handle at
  * the +x/+z corner. The half-gallon is derived from it: the same dairy-jug design with a
- * narrower body and a standard-size cap.
+ * narrower body and a standard-size cap. Both get a modelled ribbed screw cap in place of
+ * the scan's smooth one.
  */
 
 /** Scene units per metre: a gallon jug stands about as tall as a cup with its topping. */
@@ -15,13 +16,12 @@ export const JUG_SCALE = 14.6;
 export type JugSize = 'half-gallon' | 'gallon';
 
 export interface Jug {
-  /**
-   * Body (group 0, clear plastic) and cap (group 1). Triangles crossing the cap line are in
-   * both groups: the materials clip at `capY`, so the cap's edge is a clean ring.
-   */
+  /** The bottle up to the cap line. Its material clips at `capY`, so the neck ends in a clean ring. */
   body: THREE.BufferGeometry;
   /** Height of the cap's lower edge, in metres. */
   capY: number;
+  /** The screw cap. */
+  cap: THREE.BufferGeometry;
   /** The logo print, conformed to the side panel that faces -z (away from the handle). */
   print: THREE.BufferGeometry;
 }
@@ -53,24 +53,46 @@ function halfGallon(gallon: THREE.BufferGeometry) {
   return geo;
 }
 
-/** Splits the triangles into body (group 0, below the cap line) and cap (group 1, above it). */
-function withCapGroup(geo: THREE.BufferGeometry, capY: number) {
+/** Keeps the triangles that reach below the cap line (the scan's own cap is replaced). */
+function belowCap(geo: THREE.BufferGeometry, capY: number) {
   const index = geo.index!;
   const pos = geo.attributes.position;
-  const body: number[] = [];
-  const cap: number[] = [];
+  const keep: number[] = [];
   for (let t = 0; t < index.count; t += 3) {
     const a = index.getX(t);
     const b = index.getX(t + 1);
     const c = index.getX(t + 2);
-    const ys = [pos.getY(a), pos.getY(b), pos.getY(c)];
-    if (Math.min(...ys) < capY) body.push(a, b, c);
-    if (Math.max(...ys) > capY) cap.push(a, b, c);
+    if (Math.min(pos.getY(a), pos.getY(b), pos.getY(c)) < capY) keep.push(a, b, c);
   }
-  geo.setIndex([...body, ...cap]);
-  geo.clearGroups();
-  geo.addGroup(0, body.length, 0);
-  geo.addGroup(body.length, cap.length, 1);
+  const out = geo.clone();
+  out.setIndex(keep);
+  return out;
+}
+
+/**
+ * A dairy-jug screw cap: a plain tamper band at the bottom, a groove, a knurled grip of 72
+ * fine ribs, and a rounded edge onto a flat top. Built from just under `capY` (to hide the
+ * seam) up to `top`, in metres.
+ */
+function capGeometry(capY: number, top: number) {
+  const R = 0.0218;
+  const y0 = capY - 0.0004;
+  const h = top - y0;
+  // [radius, fraction of the cap's height], bottom to top.
+  const profile: [number, number][] = [
+    [0.0196, 0], [R, 0.025], [R, 0.21], [R - 0.0008, 0.23], [R - 0.0008, 0.27], [R + 0.0001, 0.29], [R + 0.0001, 0.33],
+    [R + 0.0001, 0.83], [R + 0.0001, 0.87], [R - 0.0003, 0.93], [R - 0.0012, 0.975], [R - 0.0026, 1], [0, 1],
+  ];
+  const geo = new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y0 + y * h)), 432);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i += 1) {
+    const y = (pos.getY(i) - y0) / h;
+    const grip = smooth(0.3, 0.33, y) * (1 - smooth(0.83, 0.86, y));
+    if (grip <= 0) continue;
+    const k = 1 - 0.034 * grip * (0.5 + 0.5 * Math.cos(Math.atan2(pos.getX(i), pos.getZ(i)) * 72)) ** 1.5;
+    pos.setXYZ(i, pos.getX(i) * k, pos.getY(i), pos.getZ(i) * k);
+  }
+  geo.computeVertexNormals();
   return geo;
 }
 
@@ -129,10 +151,18 @@ async function load(aspect: number) {
   });
   if (!gallon) throw new Error('gallon-jug.glb has no mesh');
   const half = halfGallon(gallon);
+  gallon.computeBoundingBox();
+  const top = gallon.boundingBox!.max.y;
   const halfCapY = GALLON_CAP_Y * HALF.height;
   const jugs: Record<JugSize, Jug> = {
-    gallon: { body: withCapGroup(gallon, GALLON_CAP_Y), capY: GALLON_CAP_Y, print: printOn(gallon, 0.1, 0.098, aspect) },
-    'half-gallon': { body: withCapGroup(half, halfCapY), capY: halfCapY, print: printOn(half, 0.078, 0.098 * HALF.height, aspect) },
+    gallon: {
+      body: belowCap(gallon, GALLON_CAP_Y), capY: GALLON_CAP_Y, cap: capGeometry(GALLON_CAP_Y, top),
+      print: printOn(gallon, 0.1, 0.098, aspect),
+    },
+    'half-gallon': {
+      body: belowCap(half, halfCapY), capY: halfCapY, cap: capGeometry(halfCapY, top * HALF.height),
+      print: printOn(half, 0.078, 0.098 * HALF.height, aspect),
+    },
   };
   return jugs;
 }

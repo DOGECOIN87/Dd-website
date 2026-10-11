@@ -202,7 +202,7 @@ class CupEngine {
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.05;
-    this.renderer.localClippingEnabled = true; // the jug caps are cut from the bottle by clipping planes
+    this.renderer.localClippingEnabled = true; // jug necks end at the cap line via a clipping plane
     this.scene.environment = studioEnvironment(this.renderer);
     const key = new THREE.DirectionalLight('#ffffff', 1.6);
     key.position.set(-5, 7, 6);
@@ -491,7 +491,8 @@ class CupEngine {
 
   /**
    * Jug plastic (the clear plastic of an empty cup, with the thinner wall of a jug, so it
-   * hardly bends what is behind it) and the cap, split cleanly at the cap line `capY` (scene units).
+   * hardly bends what is behind it), clipped at the cap line `capY` (scene units) so the neck
+   * ends cleanly under the cap; and the blue screw cap.
    */
   private jugMaterials(capY: number) {
     const id = capY.toFixed(4);
@@ -499,13 +500,10 @@ class CupEngine {
     if (!mats) {
       mats = [
         clearPlastic(new THREE.MeshPhysicalMaterial({
-          color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.06, ior: 1.57, roughness: 0.05, envMapIntensity: 1.7,
+          color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.015, ior: 1.57, roughness: 0.05, envMapIntensity: 1.7,
           transparent: true, depthWrite: false, clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, -1, 0), capY)],
         }), 0.12, 0, 0.35),
-        new THREE.MeshPhysicalMaterial({
-          color: '#2a9d47', roughness: 0.42, clearcoat: 0.3, clearcoatRoughness: 0.4, side: THREE.DoubleSide,
-          clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, 1, 0), -capY)],
-        }),
+        new THREE.MeshPhysicalMaterial({ color: '#3a7fd2', roughness: 0.36, clearcoat: 0.35, clearcoatRoughness: 0.3 }),
       ];
       this.jugMats.set(id, mats);
     }
@@ -525,7 +523,8 @@ class CupEngine {
     group.add(shadow);
     const jugGroup = new THREE.Group();
     jugGroup.scale.setScalar(JUG_SCALE);
-    jugGroup.add(new THREE.Mesh(jug.body, this.jugMaterials(jug.capY * JUG_SCALE)));
+    const [plastic, capMaterial] = this.jugMaterials(jug.capY * JUG_SCALE);
+    jugGroup.add(new THREE.Mesh(jug.body, plastic), new THREE.Mesh(jug.cap, capMaterial));
     const { material } = await this.printMaterial(TALL, 0, true);
     jugGroup.add(new THREE.Mesh(jug.print, material));
     group.add(jugGroup);
