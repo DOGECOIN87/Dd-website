@@ -4,7 +4,7 @@ import { LIQUID_VMAX } from './geometry';
 
 /**
  * Half-gallon and gallon jugs. The gallon is "Milk 1 gallon jug from USA" by boost5u
- * (CC BY 4.0, credited in the site footer), slimmed by scripts/slim-gallon-glb.py into
+ * (CC BY 4.0; the credit is kept in the model file's metadata), slimmed by scripts/slim-gallon-glb.py into
  * public/models/gallon-jug.glb: metres, y up, origin at the centre of the base, handle at
  * the +x/+z corner. The half-gallon is derived from it: the same dairy-jug design with a
  * narrower body and a standard-size cap. Both get a modelled ribbed screw cap in place of

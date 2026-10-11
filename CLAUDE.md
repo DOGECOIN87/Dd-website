@@ -24,7 +24,8 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
 - The jugs (`src/cups/jugs.ts`): half-gallon and gallon, the same clear plastic as the cups (the owner chose
   clear over milky), a blue ribbed screw cap from the owner's reference, and the black print. Filled to the
   neck for the "½ Gallon Jug" and "Gallon Jug" menu cards, empty for the set-up extras. The gallon model is
-  CC BY 4.0 (boost5u): keep the footer credit.
+  CC BY 4.0 (boost5u). The owner removed the footer credit; the credit stays in the model file's asset
+  metadata (`scripts/slim-gallon-glb.py` writes it). Keep it there.
 - The cup print is the Sip Society + Daiquiri depot logo in black, one colour
   (`public/brand/cup-print.webp`, built by `scripts/build-cup-print.py`). The navbar and footer keep the
   full-colour logo.

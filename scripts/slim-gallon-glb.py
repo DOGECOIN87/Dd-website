@@ -7,7 +7,7 @@ are recomputed from the smoothed surface.
 
 Source: "Milk 1 gallon jug from USA" by boost5u, CC BY 4.0,
 https://sketchfab.com/3d-models/milk-1-gallon-jug-from-usa-7e64723df1854c5b8d45419fe86d96b5
-(credited in the site footer). Needs numpy and scipy.
+(the credit is written into the output's asset metadata). Needs numpy and scipy.
 
 Usage: python3 -I scripts/slim-gallon-glb.py milk_1_gallon_jug_from_usa.glb public/models/gallon-jug.glb
 """

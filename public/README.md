@@ -10,7 +10,7 @@ Brand:
 
 3D models:
 
-- `models/gallon-jug.glb`: "Milk 1 gallon jug from USA" by boost5u (https://sketchfab.com/3d-models/milk-1-gallon-jug-from-usa-7e64723df1854c5b8d45419fe86d96b5), CC BY 4.0, slimmed and smoothed by `scripts/slim-gallon-glb.py`. The credit in the site footer is required by the licence; keep it.
+- `models/gallon-jug.glb`: "Milk 1 gallon jug from USA" by boost5u (https://sketchfab.com/3d-models/milk-1-gallon-jug-from-usa-7e64723df1854c5b8d45419fe86d96b5), CC BY 4.0, slimmed and smoothed by `scripts/slim-gallon-glb.py`. The licence requires credit; the owner removed the footer line, so the credit lives in the file's asset metadata (keep it there).
 
 Photos:
 
