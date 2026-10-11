@@ -12,7 +12,7 @@ page.on('pageerror', (e) => logs.push(`pageerror: ${e.message}`));
 page.on('response', (r) => { if (r.status() >= 400) logs.push(`http ${r.status()}: ${r.url()}`); });
 await page.goto(`http://127.0.0.1:3000/tools/cup-lab.html?${query}`, { waitUntil: 'networkidle' });
 const n = await page.locator('canvas').count();
-await page.waitForFunction((k) => document.querySelectorAll('canvas[data-ready]').length >= k, n, { timeout: 180000 });
+await page.waitForFunction((k) => document.querySelectorAll('canvas[data-ready]').length >= k, n, { timeout: 420000 });
 await page.waitForTimeout(600);
 if (spinMs) {
   await page.evaluate(() => window.spin(true));

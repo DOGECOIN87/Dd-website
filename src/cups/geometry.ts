@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /**
@@ -87,18 +86,12 @@ export interface LiquidShape {
   top: number;
   /** Height of the heaped slush above `top` (frozen drinks). */
   mound?: number;
-  /** Narrow the drink below this height so tapioca pearls can sit against the wall. */
-  pearlZone?: number;
 }
 
 /** Drink volume following the inside of the wall, with a meniscus or a heaped frozen top. */
 export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMAX, seed = 1) {
   const inset = d.wall + 0.012;
-  const rAt = (y: number) => {
-    let r = sideR(d, y) - inset;
-    if (shape.pearlZone) r -= 0.17 * (1 - smooth(shape.pearlZone - 0.08, shape.pearlZone + 0.06, y));
-    return r;
-  };
+  const rAt = (y: number) => sideR(d, y) - inset;
   const base = 0.095;
   const points = [V(0, base), V(rAt(base) - 0.03, base), V(rAt(base + 0.02) - 0.005, base + 0.012)];
   const steps = 60;
@@ -162,25 +155,6 @@ export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMA
   return geo;
 }
 
-/** A slightly irregular ice cube: rounded edges, faces not quite flat. */
-export function iceGeometry(seed: number) {
-  const geo = new RoundedBoxGeometry(1, 1, 1, 3, 0.18);
-  const rand = mulberry(seed);
-  const pos = geo.attributes.position;
-  const bumps = Array.from({ length: 3 }, () => [rand() * 6, rand() * 6, rand() * 6, 2 + rand() * 3] as const);
-  for (let i = 0; i < pos.count; i += 1) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    let n = 0;
-    for (const [a, b, c, f] of bumps) n += Math.sin(f * x + a) * Math.sin(f * y + b) * Math.sin(f * z + c);
-    const k = 1 + n * 0.03;
-    pos.setXYZ(i, x * k, y * k, z * k);
-  }
-  geo.computeVertexNormals();
-  return geo;
-}
-
 /**
  * Curved band just outside the wall that carries the printed logo, centred on phi = π.
  * A second UV set (uv1) is in cup space, so the wall's condensation maps line up on the print.
@@ -200,76 +174,6 @@ export function decalGeometry(d: CupDims, y0: number, y1: number, arc: number) {
     uv1[i * 2 + 1] = pos.getY(i) / d.h;
   }
   geo.setAttribute('uv1', new THREE.BufferAttribute(uv1, 2));
-  return geo;
-}
-
-/**
- * A dollop of whipped cream: a thick, soft rope wound about two and a half times, each fat
- * coil slumping onto the one below, rising to a pointed tip that leans over. Only gentle
- * folds run along it (no sharp nozzle ridges). Vertex colours carry the warm, peachy shading
- * cream has where it folds under, since light scatters inside it rather than going grey.
- */
-export function whipGeometry(base: number, seed: number) {
-  const rand = mulberry(seed);
-  const turns = 2.35 + rand() * 0.25;
-  const start = rand() * Math.PI * 2;
-  const lean = rand() * Math.PI * 2;
-  const R0 = 0.52;
-  const N = 360;
-  const pts: THREE.Vector3[] = [];
-  const thick: number[] = [];
-  const ph = [rand() * 6.3, rand() * 6.3, rand() * 6.3];
-  let climb = 0;
-  for (let i = 0; i <= N; i += 1) {
-    const t = i / N;
-    const turn = t * turns;
-    const ang = start + turn * Math.PI * 2;
-    const wobble = 1 + 0.06 * Math.sin(ang * 2 + ph[0]) + 0.03 * Math.sin(ang * 3 + ph[1]);
-    const rad = R0 * (1 - t) ** 1.1 * wobble;
-    // The first ring is laid nearly flat on the drink; every later turn rises about one rope
-    // thickness, so each coil sits on the one below. The last stretch climbs into the tip,
-    // which leans to one side.
-    if (i) climb += (turns / N) * (0.1 + 0.25 * smooth(0.75, 1.1, turn));
-    const tip = smooth(0.74, 1, t);
-    const y = base + 0.05 + climb + 0.3 * tip ** 1.4 + 0.02 * Math.sin(ang * 1.3 + ph[2]);
-    const bend = 0.16 * tip ** 2;
-    pts.push(new THREE.Vector3(Math.cos(ang) * rad + Math.cos(lean) * bend, y, Math.sin(ang) * rad + Math.sin(lean) * bend));
-    thick.push(0.27 * (1 - 0.4 * t) * (0.6 + 0.4 * smooth(0, 0.05, t)) * (1 - smooth(0.8, 1.02, t)) ** 0.55
-      * (1 + 0.07 * Math.sin(ang * 3 + ph[1])));
-  }
-  const curve = new THREE.CatmullRomCurve3(pts);
-  const segs = 480;
-  const radial = 48;
-  const geo = new THREE.TubeGeometry(curve, segs, 1, radial, false);
-  const pos = geo.attributes.position;
-  const colors = new Float32Array(pos.count * 3);
-  const c = new THREE.Vector3();
-  const v = new THREE.Vector3();
-  for (let i = 0; i <= segs; i += 1) {
-    const t = i / segs;
-    curve.getPointAt(t, c);
-    const k = Math.min(N, t * N);
-    const k0 = Math.floor(k);
-    const r = thick[k0] + (thick[Math.min(N, k0 + 1)] - thick[k0]) * (k - k0);
-    for (let j = 0; j <= radial; j += 1) {
-      const idx = i * (radial + 1) + j;
-      v.fromBufferAttribute(pos, idx).sub(c);
-      const a = (j / radial) * Math.PI * 2;
-      // Soft folds where the cream creased leaving the nozzle, drifting round as it was piped.
-      const fold = Math.cos(a * 5 + t * 7 + ph[0]);
-      const crease = 1 - 0.05 * Math.max(0, fold) ** 6 + 0.025 * fold + 0.015 * Math.sin(a * 11 + i * 0.13);
-      const down = Math.max(0, -v.y);
-      v.multiplyScalar(r * crease);
-      v.y *= v.y < 0 ? 0.6 : 0.9; // slumped onto the coil below
-      pos.setXYZ(idx, c.x + v.x, c.y + v.y, c.z + v.z);
-      const shade = 1 - 0.5 * down ** 1.1 - 0.1 * Math.max(0, fold) ** 6;
-      colors[idx * 3] = 0.9 + 0.1 * shade;
-      colors[idx * 3 + 1] = 0.78 + 0.22 * shade;
-      colors[idx * 3 + 2] = 0.7 + 0.3 * shade;
-    }
-  }
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geo.computeVertexNormals();
   return geo;
 }
 
