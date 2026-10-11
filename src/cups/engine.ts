@@ -592,8 +592,8 @@ class CupEngine {
       switch (spec.kind) {
         case 'frozen': return { top: d.h - 0.08, mound: 0.38 };
         case 'boba': return { top: d.h - 0.05, pearlZone: 0.85 };
-        // Iced drinks sit a little lower, so the floating cubes show without rising above the rim.
-        default: return spec.ice ? { top: d.h - 0.09, dome: 0.016 } : { top: d.h - 0.05 };
+        // Iced water sits a little lower, so its floating cubes show without rising above the rim.
+        default: return spec.ice && spec.clear ? { top: d.h - 0.09, dome: 0.016 } : { top: d.h - 0.05 };
       }
     })();
     const vMax = LIQUID_VMAX;
@@ -665,9 +665,10 @@ class CupEngine {
       group.add(core);
     }
 
-    if (spec.ice) {
-      // A few cubes floating at the surface, loosely spread, each with its highest corner just under
-      // the rim: never above it.
+    if (spec.ice && spec.clear) {
+      // Iced water: a few cubes floating at the surface, loosely spread, each with its highest corner
+      // just under the rim (never above it). A coloured drink fills its cup to the brim and would hide
+      // floating cubes; its ice shows against the wall instead (liquidTexture).
       const { geos, mat } = this.iceKit();
       const box = new THREE.Box3();
       for (let i = 0; i < 3; i += 1) {
@@ -681,8 +682,8 @@ class CupEngine {
         cube.position.y = d.h - 0.005 - rand() * 0.02 - box.max.y;
         group.add(cube);
       }
-      // In a clear drink you can see the rest of the ice packed below the surface.
-      for (let i = 0; spec.clear && i < 14; i += 1) {
+      // Through the water you can see the rest of the ice packed below the surface.
+      for (let i = 0; i < 14; i += 1) {
         const y = 0.35 + (i / 14) * (shape.top - 0.6) + rand() * 0.1;
         const a = rand() * Math.PI * 2;
         const r = (sideR(d, y) - 0.3) * Math.sqrt(rand());

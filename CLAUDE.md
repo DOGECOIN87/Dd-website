@@ -14,8 +14,9 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
   condensation; every other drink's cup looks like the water cup, as the owner asked: an even, smooth mist
   up to the rim with no beads, so no speckles and no thick ring show at the top. Keep
   each drink's own contents (whipped cream, pearls, ice, drizzle): the owner said not to change them.
-  Empty cups stay dry, since misted plastic makes them nearly invisible. Just three ice cubes float at the surface and
-  never rise above the rim (iced drinks sit a little lower so the cubes show).
+  Empty cups stay dry, since misted plastic makes them nearly invisible. Ice never rises above the rim: coloured iced
+  drinks (dirty soda, sangria, Bloody Mary) fill to the brim like the rest, their ice showing against
+  the wall; only the water sits a little lower, with three cubes floating under the rim.
 - The one exception: Tipsy Bears and Gummy Bears come in the small, wide shot cup (`SHOT` in
   `geometry.ts`) with no print, the older design the owner asked to keep for the gummy bears.
 - The jugs (`src/cups/jugs.ts`): half-gallon and gallon, the same clear plastic as the cups (the owner chose
