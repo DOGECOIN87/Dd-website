@@ -500,7 +500,8 @@ class CupEngine {
     if (!mats) {
       mats = [
         clearPlastic(new THREE.MeshPhysicalMaterial({
-          color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.015, ior: 1.57, roughness: 0.05, envMapIntensity: 1.7,
+          // three.js scales refraction thickness by the object's scale; the jug is scaled from metres.
+          color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.03 / JUG_SCALE, ior: 1.57, roughness: 0.05, envMapIntensity: 1.7,
           transparent: true, depthWrite: false, clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, -1, 0), capY)],
         }), 0.12, 0, 0.35),
         new THREE.MeshPhysicalMaterial({ color: '#3a7fd2', roughness: 0.36, clearcoat: 0.35, clearcoatRoughness: 0.3 }),
