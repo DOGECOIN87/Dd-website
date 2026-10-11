@@ -11,17 +11,17 @@ export const lineup: { name: string; detail: string; spec: DrinkSpec }[] = [
   {
     name: 'Gourmet Coffee',
     detail: 'Texas Artisan Roasters espresso, iced, with all the drizzle.',
-    spec: { kind: 'frozen', colors: ['#dcbc96', '#c39466', '#8f6140'] },
+    spec: { kind: 'latte', colors: ['#d8b48c', '#c39466', '#a9784c'], drizzle: '#3b1d10', whip: true },
   },
   {
     name: 'Boba',
     detail: 'Milk teas with chewy tapioca pearls, or add boba to any daiquiri.',
-    spec: { kind: 'frozen', colors: ['#d4b8e6', '#bc9bd4', '#a886c6'] },
+    spec: { kind: 'boba', colors: ['#cdb0e0', '#bc9bd4', '#b18ccc'], pearls: true },
   },
   {
     name: 'Dirty Sodas',
     detail: 'Your soda plus cream, syrups and a squeeze of something good.',
-    spec: { kind: 'frozen', colors: ['#e3c9a8', '#5a2f18', '#3a1d0e'] },
+    spec: { kind: 'soda', colors: ['#4a2614', '#331a0d', '#26130a'], drizzle: '#e8d2b4', ice: true },
   },
   {
     name: 'Smoothies',
@@ -31,19 +31,19 @@ export const lineup: { name: string; detail: string; spec: DrinkSpec }[] = [
 ];
 
 const cocktails: Record<string, DrinkSpec> = {
-  Sangria: { kind: 'frozen', colors: ['#8a1c38', '#5e0f26'] },
-  Mimosa: { kind: 'frozen', colors: ['#f8bf47', '#f6a93a'] },
-  'Bloody Mary': { kind: 'frozen', colors: ['#b72a20', '#9c2219'], inclusions: 'specks' },
+  Sangria: { kind: 'soda', colors: ['#7d1631', '#5e0f26'], ice: true },
+  Mimosa: { kind: 'soda', colors: ['#f8bf47', '#f6a93a'], inclusions: 'bubbles' },
+  'Bloody Mary': { kind: 'soda', colors: ['#b72a20', '#9c2219'], inclusions: 'specks', ice: true },
   'Frozen Espresso Martini': { kind: 'frozen', colors: ['#d9bc98', '#8a5a36', '#5a3520'] },
   'Frozen Jack & Coke': { kind: 'frozen', colors: ['#6b3a20', '#4a2614'] },
 };
 
 const extras: Record<string, DrinkSpec> = {
-  'Pickle Shot': { kind: 'frozen', colors: ['#c3cc63', '#aeb84f'] },
-  'Jello Shot': { kind: 'frozen', colors: ['#e8434f', '#d32f3f'] },
+  'Pickle Shot': { kind: 'soda', colors: ['#c3cc63', '#aeb84f'] },
+  'Jello Shot': { kind: 'soda', colors: ['#e8434f', '#d32f3f'], jello: true },
   'Tipsy Bears': { kind: 'empty', colors: [], gummies: true },
   'Gummy Bears': { kind: 'empty', colors: [], gummies: true },
-  Water: { kind: 'frozen', colors: ['#f1f7fa', '#e2eef4'] }, // a cup heaped with crushed ice
+  Water: { kind: 'soda', colors: ['#e6f3f8'], ice: true, clear: true },
   'Extra Cup': { kind: 'empty', colors: [] },
   'Extra ½ gallon set up': { kind: 'empty', colors: [], container: 'half-gallon' },
   'Extra gallon set up': { kind: 'empty', colors: [], container: 'gallon' },
