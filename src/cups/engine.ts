@@ -666,13 +666,13 @@ class CupEngine {
     }
 
     if (spec.ice) {
-      // Cubes floating at the surface, a ring and one in the middle, each with its highest corner
-      // just under the rim: never above it.
+      // A few cubes floating at the surface, loosely spread, each with its highest corner just under
+      // the rim: never above it.
       const { geos, mat } = this.iceKit();
       const box = new THREE.Box3();
-      for (let i = 0; i < 7; i += 1) {
-        const a = (i / 6) * Math.PI * 2 + (rand() - 0.5) * 0.25;
-        const r = i === 6 ? 0.04 : 0.56 + rand() * 0.06;
+      for (let i = 0; i < 3; i += 1) {
+        const a = (i / 3) * Math.PI * 2 + (rand() - 0.5) * 0.6;
+        const r = 0.42 + rand() * 0.16;
         const cube = new THREE.Mesh(geos[i % geos.length], mat);
         cube.scale.set(0.3 + rand() * 0.07, 0.27 + rand() * 0.07, 0.3 + rand() * 0.07);
         cube.rotation.set((rand() - 0.5) * 0.5, rand() * 3, (rand() - 0.5) * 0.5);

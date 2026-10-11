@@ -12,7 +12,7 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
   Every drink fills the cup to the brim, as the frozen daiquiris do, and its cup is misted the same way
   (`COLD_TOP` in `engine.ts`). The owner rejected cups with an empty band of plastic under the rim. Keep
   each drink's own contents (whipped cream, pearls, ice, drizzle): the owner said not to change them.
-  Empty cups stay dry, since misted plastic makes them nearly invisible. Ice cubes float at the surface and
+  Empty cups stay dry, since misted plastic makes them nearly invisible. Just three ice cubes float at the surface and
   never rise above the rim (iced drinks sit a little lower so the cubes show).
 - The one exception: Tipsy Bears and Gummy Bears come in the small, wide shot cup (`SHOT` in
   `geometry.ts`) with no print, the older design the owner asked to keep for the gummy bears.
