@@ -115,7 +115,11 @@ export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMA
       points.push(V(Math.max(0, r0 * Math.cos(th) ** 0.8), shape.top + 0.01 + shape.mound * Math.sin(th) ** 1.25));
     }
   } else {
-    points.push(V(rTop - 0.012, shape.top + 0.012), V(rTop - 0.05, shape.top + 0.016), V(rTop * 0.5, shape.top + 0.016), V(0, shape.top + 0.016));
+    // Filled to the brim: the surface bulges a little above where it meets the wall, as in a full cup.
+    points.push(
+      V(rTop - 0.01, shape.top + 0.018), V(rTop - 0.03, shape.top + 0.03), V(rTop - 0.08, shape.top + 0.038),
+      V(rTop * 0.5, shape.top + 0.042), V(0, shape.top + 0.042),
+    );
   }
   const geo = lathe(points, 128, 0, vMax);
   if (shape.mound) {

@@ -35,6 +35,9 @@ const CAMERA_DISTANCE = 15;
 const PRINT_WIDTH = 1.42;
 const PRINT_MID_Y = 1.5;
 
+/** Condensation mists every drink's cup up to here, just under the rim, as on the frozen daiquiri's cup. */
+const COLD_TOP = TALL.h - 0.2;
+
 interface Glide {
   from: number;
   dist: number;
@@ -581,13 +584,13 @@ class CupEngine {
     }
     group.add(shadow);
 
-    // The drink
+    // The drink. Every cup is filled to the brim, like the frozen daiquiris, so no empty band of cup
+    // shows under the rim; only what is inside differs.
     const shape: LiquidShape = (() => {
       switch (spec.kind) {
         case 'frozen': return { top: d.h - 0.08, mound: 0.38 };
-        case 'latte': return { top: d.h - 0.12 };
-        case 'boba': return { top: d.h - 0.18, pearlZone: 0.85 };
-        default: return { top: d.h - 0.22 };
+        case 'boba': return { top: d.h - 0.05, pearlZone: 0.85 };
+        default: return { top: d.h - 0.05 };
       }
     })();
     const vMax = LIQUID_VMAX;
@@ -691,8 +694,8 @@ class CupEngine {
       }
     }
 
-    // The cup itself, with condensation below the drink line.
-    const cold = spec.kind === 'empty' ? 0 : Math.min(shape.top, d.h - 0.2);
+    // The cup itself: every drink's cup mists the same way as the frozen daiquiri's. An empty cup stays dry.
+    const cold = spec.kind === 'empty' ? 0 : COLD_TOP;
     group.add(new THREE.Mesh(geo, this.cupMaterial(d, cold)));
 
     if (spec.logo !== false) {

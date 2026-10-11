@@ -9,6 +9,10 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
 
 - One cup design everywhere: the open, lidless clear 24 oz cup of the hero's first drink. Every item, party
   favors and empty cups included, uses it; only the contents change. No straws, no fruit garnishes.
+  Every drink fills the cup to the brim, as the frozen daiquiris do, and its cup is misted the same way
+  (`COLD_TOP` in `engine.ts`). The owner rejected cups with an empty band of plastic under the rim. Keep
+  each drink's own contents (whipped cream, pearls, ice, drizzle): the owner said not to change them.
+  Empty cups stay dry, since misted plastic makes them nearly invisible.
 - The jugs (`src/cups/jugs.ts`): half-gallon and gallon, the same clear plastic as the cups (the owner chose
   clear over milky), a blue ribbed screw cap from the owner's reference, and the black print. Filled to the
   neck for the "½ Gallon Jug" and "Gallon Jug" menu cards, empty for the set-up extras. The gallon model is
