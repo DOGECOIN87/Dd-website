@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/react';
 import { MotionConfig } from 'motion/react';
 import { About } from './components/About';
 import { Compare } from './components/Compare';
@@ -29,6 +30,7 @@ export default function App() {
         </main>
         <Footer />
       </div>
+      <Analytics />
     </MotionConfig>
   );
 }
