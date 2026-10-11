@@ -25,6 +25,23 @@ const REST_ANGLE = -0.18; // the print faces the viewer, turned just enough to r
 const FRAME_FAST = 1000 / 60; // one or two cups spinning
 const FRAME_SLOW = 1000 / 30; // a phone with a screenful of spinning cups
 
+/**
+ * Render quality: cups draw at the screen's full pixel density and are supersampled (rendered larger,
+ * then scaled down smoothly), which keeps the print, rims and droplets crisp at every size. Still cups
+ * always get the full supersample; spinning cups get as much as the device keeps up with.
+ */
+const MAX_DPR = 3;
+const SUPERSAMPLE = 2;
+/**
+ * Size of one render: bounds the GL canvas and the transmission pass's render target (one per render
+ * size, with 4x MSAA in half float) so a large cup on a 3x phone stays within mobile GPU memory.
+ */
+const MAX_RENDER_PIXELS = 1_300_000;
+const MAX_RENDER_SIDE = 2048;
+/** Frame cost (ms) above which spinning cups drop supersampling, and below which they get it back. */
+const COST_HIGH = 10;
+const COST_LOW = 5;
+
 /** Camera: a product shot from slightly above the rim, framed to the cup now that drinks have no straws. */
 const CAMERA_FOV = 17.5;
 const CAMERA_TARGET_Y = 1.78;
@@ -61,6 +78,8 @@ interface Handle {
   w: number;
   h: number;
   dirty: boolean;
+  /** Last drawn at full still quality; false after a frame drawn in motion. */
+  sharp: boolean;
 }
 
 /**
@@ -68,13 +87,16 @@ interface Handle {
  * transparent canvas: where nothing is behind it the material fades to a faint
  * haze, while its reflections (softbox streaks, droplet glints) stay bright.
  * Rough areas of the surface (condensation mist) also fog what is behind them.
+ * `outline` keeps the darkened edges (`edge`) visible where nothing is behind the
+ * wall, so an empty cup or jug still shows its shape on a pale page.
  */
-function clearPlastic(material: THREE.MeshPhysicalMaterial, haze: number, frost = 0, edge = 0) {
+function clearPlastic(material: THREE.MeshPhysicalMaterial, haze: number, frost = 0, edge = 0, outline = 0) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uHaze = { value: haze };
     shader.uniforms.uFrost = { value: frost };
     shader.uniforms.uEdge = { value: edge };
-    shader.fragmentShader = `uniform float uHaze;\nuniform float uFrost;\nuniform float uEdge;\n${shader.fragmentShader}`
+    shader.uniforms.uOutline = { value: outline };
+    shader.fragmentShader = `uniform float uHaze;\nuniform float uFrost;\nuniform float uEdge;\nuniform float uOutline;\n${shader.fragmentShader}`
       .replace('#include <transmission_fragment>', THREE.ShaderChunk.transmission_fragment.replace(
         'material.transmissionAlpha = mix( material.transmissionAlpha, transmitted.a, material.transmission );',
         `float cover = clamp( ( transmitted.a - 0.5 ) * 2.0, 0.0, 1.0 );
@@ -82,8 +104,9 @@ function clearPlastic(material: THREE.MeshPhysicalMaterial, haze: number, frost 
         transmitted.rgb = mix( vec3( 0.93, 0.96, 0.97 ), behind, smoothstep( 0.0, 0.25, cover ) );
         float mist = uFrost * smoothstep( 0.06, 0.1, material.roughness );
         transmitted.rgb = mix( transmitted.rgb, vec3( 0.95, 0.965, 0.975 ), mist );
-        transmitted.rgb *= 1.0 - uEdge * pow( 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 ), 2.0 );
-        material.transmissionAlpha = mix( material.transmissionAlpha, max( cover, uHaze + mist * 0.35 ), material.transmission );`,
+        float rim = pow( 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 ), 2.0 );
+        transmitted.rgb *= 1.0 - uEdge * rim;
+        material.transmissionAlpha = mix( material.transmissionAlpha, max( cover, uHaze + mist * 0.35 + uOutline * rim ), material.transmission );`,
       ))
       .replace('#include <opaque_fragment>', `
         #ifdef USE_TRANSMISSION
@@ -177,6 +200,8 @@ class CupEngine {
   private cost = 0;
   /** Cups that turned last frame. */
   private spinning = 0;
+  /** Supersampling for spinning cups, adjusted to the device's frame cost. */
+  private motionScale = SUPERSAMPLE;
   private raf = 0;
   private reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   private readonly io: IntersectionObserver;
@@ -233,7 +258,7 @@ class CupEngine {
       for (const entry of entries) {
         const handle = this.byCanvas.get(entry.target);
         if (!handle) continue;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
         handle.w = Math.max(1, Math.round(entry.contentRect.width * dpr));
         handle.h = Math.max(1, Math.round(entry.contentRect.height * dpr));
         handle.canvas.width = handle.w;
@@ -250,7 +275,7 @@ class CupEngine {
     if (!ctx) return { dispose: () => undefined, setActive: () => undefined };
     const key = specKey(spec);
     const handle: Handle = {
-      canvas, ctx, key, spec, active: false, angle: 0, velocity: 0, glide: null, visible: false, w: 0, h: 0, dirty: true,
+      canvas, ctx, key, spec, active: false, angle: 0, velocity: 0, glide: null, visible: false, w: 0, h: 0, dirty: true, sharp: false,
     };
     this.handles.add(handle);
     this.byCanvas.set(canvas, handle);
@@ -380,11 +405,15 @@ class CupEngine {
       if (turned || handle.active) busy = true;
       if (!handle.visible || !handle.w) continue;
       if (turned) spinning += 1;
-      if ((turned || handle.dirty) && this.draw(handle)) handle.dirty = false;
+      // A cup that has just stopped is drawn once more at full quality.
+      if ((turned || handle.dirty || !handle.sharp) && this.draw(handle, turned)) handle.dirty = false;
       if (handle.dirty) busy = true; // still waiting for its drink to finish building
     }
     this.spinning = spinning;
     this.cost = this.cost * 0.8 + (performance.now() - start) * 0.2;
+    // Two levels only (each render size keeps its own transmission target): supersampled, or plain.
+    if (spinning && this.cost > COST_HIGH) this.motionScale = 1;
+    else if (spinning && this.cost < COST_LOW) this.motionScale = SUPERSAMPLE;
     // Idle when nothing is spinning: still cups cost nothing after their first frame.
     if (busy) this.kick();
     else this.last = 0;
@@ -402,24 +431,34 @@ class CupEngine {
     return cam;
   }
 
-  private draw(handle: Handle) {
+  /** Renders a cup supersampled (less while it spins on a busy device) and scales it into its canvas. */
+  private draw(handle: Handle, moving: boolean) {
     const group = this.groups.get(handle.key);
     if (!group) return false;
     const { w, h } = handle;
-    if (w > this.glW || h > this.glH) {
-      this.glW = Math.max(this.glW, w);
-      this.glH = Math.max(this.glH, h);
+    const scale = Math.max(1, Math.min(
+      moving ? this.motionScale : SUPERSAMPLE, Math.sqrt(MAX_RENDER_PIXELS / (w * h)), MAX_RENDER_SIDE / Math.max(w, h),
+    ));
+    const rw = Math.round(w * scale);
+    const rh = Math.round(h * scale);
+    if (rw > this.glW || rh > this.glH) {
+      this.glW = Math.max(this.glW, rw);
+      this.glH = Math.max(this.glH, rh);
       this.renderer.setSize(this.glW, this.glH, false);
     }
     group.rotation.y = Math.PI + REST_ANGLE + handle.angle;
     this.scene.add(group);
-    this.renderer.setViewport(0, 0, w, h);
-    this.renderer.setScissor(0, 0, w, h);
+    this.renderer.setViewport(0, 0, rw, rh);
+    this.renderer.setScissor(0, 0, rw, rh);
     this.renderer.setScissorTest(true);
-    this.renderer.render(this.scene, this.camera(w, h));
+    this.renderer.render(this.scene, this.camera(rw, rh));
     this.scene.remove(group);
-    handle.ctx.clearRect(0, 0, w, h);
-    handle.ctx.drawImage(this.renderer.domElement, 0, this.glH - h, w, h, 0, 0, w, h);
+    const { ctx } = handle;
+    ctx.imageSmoothingEnabled = true; // resizing a canvas resets these
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(this.renderer.domElement, 0, this.glH - rh, rw, rh, 0, 0, w, h);
+    handle.sharp = !moving;
     handle.canvas.dataset.ready = 'true';
     return true;
   }
@@ -448,7 +487,7 @@ class CupEngine {
         roughness: wet ? 1 : 0.05, roughnessMap: wet?.roughness ?? null,
         normalMap: wet?.normal ?? null, normalScale: new THREE.Vector2(0.9, 0.9),
         envMapIntensity: wet ? 1.15 : 1.7, transparent: true, depthWrite: false,
-      }), wet ? 0.06 : 0.12, wet ? 0.06 : 0, wet ? 0 : 0.35);
+      }), wet ? 0.06 : 0.12, wet ? 0.06 : 0, wet ? 0 : 0.5, wet ? 0 : 1);
       this.cupMat.set(id, m);
     }
     return m;
@@ -506,7 +545,7 @@ class CupEngine {
           // three.js scales refraction thickness by the object's scale; the jug is scaled from metres.
           color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.03 / JUG_SCALE, ior: 1.57, roughness: 0.05, envMapIntensity: 1.7,
           transparent: true, depthWrite: false, clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, -1, 0), capY)],
-        }), 0.12, 0, 0.35),
+        }), 0.12, 0, 0.5, 1),
         new THREE.MeshPhysicalMaterial({ color: '#3a7fd2', roughness: 0.36, clearcoat: 0.35, clearcoatRoughness: 0.3 }),
       ];
       this.jugMats.set(id, mats);

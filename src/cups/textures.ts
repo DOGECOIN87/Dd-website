@@ -87,7 +87,7 @@ function texture(c: HTMLCanvasElement, srgb = true) {
   const t = new THREE.CanvasTexture(c);
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = THREE.RepeatWrapping;
-  t.anisotropy = 8;
+  t.anisotropy = 16; // three clamps this to what the GPU supports
   return t;
 }
 
@@ -517,7 +517,7 @@ export async function printTexture() {
   const img = await loadImage('/brand/cup-print.webp');
   const t = new THREE.Texture(img);
   t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
+  t.anisotropy = 16; // three clamps this to what the GPU supports
   t.needsUpdate = true;
   return { map: t, aspect: img.naturalWidth / img.naturalHeight };
 }

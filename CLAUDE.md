@@ -31,6 +31,10 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
 - Realism is the bar. Past feedback: "the cups look fake", "the swirl patterns are too perfect", "fix the
   whipped topping". The whipped cream reference the owner chose is the Sketchfab model "Whipped Cream" by
   Suphanee: a soft dollop of fat, stacked coils rising to a leaning tip, no sharp nozzle ridges.
+- Highest render quality (owner's request): cups draw at the screen's full pixel density (up to 3x) and
+  2x supersampled, scaled down smoothly (`SUPERSAMPLE`, `MAX_RENDER_PIXELS` in `engine.ts`). Spinning cups
+  drop to plain resolution only while frames run over budget, and are redrawn sharp when they stop. Empty
+  cups and jugs get a soft grey edge (`outline` in `clearPlastic`) so they show on the cream menu cards.
 - Hover spin: a cup spins while its card is hovered or focused (on touch screens, while it is on screen),
   then finishes its turn and settles with the print facing front.
 - Images: only ones the owner has approved; avoid AI-generated imagery. The FM 306 drive-thru photo was
@@ -68,8 +72,10 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
    changing the print for small sizes.
 7. **Print on dark drinks** (dirty soda, Frozen Jack & Coke): black ink is low contrast, as on a real
    cup. Ask the owner before adding an outline or a white underprint.
-8. **Performance**: every spinning cup re-renders with a transmission pass, and each drink paints a
-   1024 x 512 texture the first time it is seen. Profile on a mid-range Android before adding cost.
+8. **Performance**: every spinning cup re-renders with a transmission pass (2x supersampled while the
+   device keeps up), and each drink paints a 1024 x 512 texture the first time it is seen. Each render
+   size keeps its own transmission target, so keep the motion levels to two. Profile on a mid-range
+   Android before adding cost; larger liquid textures would sharpen the hero cups further.
 
 ## Code map
 
