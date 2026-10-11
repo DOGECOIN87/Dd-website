@@ -4,6 +4,7 @@ import {
   mulberry, sideR, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
+import { JUG_SCALE, loadJugs } from './jugs';
 import { condensationMaps, iceNormalMap, liquidTexture, printTexture, shadowTexture, slushNormalMap } from './textures';
 import { specKey, type DrinkSpec } from './types';
 
@@ -193,6 +194,7 @@ class CupEngine {
   private readonly shadow: THREE.Mesh;
   private print?: Promise<{ map: THREE.Texture; aspect: number }>;
   private ice?: { geos: THREE.BufferGeometry[]; mat: THREE.MeshPhysicalMaterial };
+  private readonly jugMats = new Map<string, THREE.Material[]>();
 
   constructor() {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -200,6 +202,7 @@ class CupEngine {
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.05;
+    this.renderer.localClippingEnabled = true; // the jug caps are cut from the bottle by clipping planes
     this.scene.environment = studioEnvironment(this.renderer);
     const key = new THREE.DirectionalLight('#ffffff', 1.6);
     key.position.set(-5, 7, 6);
@@ -486,7 +489,51 @@ class CupEngine {
     return this.ice;
   }
 
+  /**
+   * Jug plastic (the clear plastic of an empty cup, with the thinner wall of a jug, so it
+   * hardly bends what is behind it) and the cap, split cleanly at the cap line `capY` (scene units).
+   */
+  private jugMaterials(capY: number) {
+    const id = capY.toFixed(4);
+    let mats = this.jugMats.get(id);
+    if (!mats) {
+      mats = [
+        clearPlastic(new THREE.MeshPhysicalMaterial({
+          color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.06, ior: 1.57, roughness: 0.05, envMapIntensity: 1.7,
+          transparent: true, depthWrite: false, clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, -1, 0), capY)],
+        }), 0.12, 0, 0.35),
+        new THREE.MeshPhysicalMaterial({
+          color: '#2a9d47', roughness: 0.42, clearcoat: 0.3, clearcoatRoughness: 0.4, side: THREE.DoubleSide,
+          clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, 1, 0), -capY)],
+        }),
+      ];
+      this.jugMats.set(id, mats);
+    }
+    return mats;
+  }
+
+  /** An empty, capped half-gallon or gallon jug with the print on the panel facing the viewer. */
+  private async buildJug(size: 'half-gallon' | 'gallon') {
+    this.print ??= printTexture();
+    const { aspect } = await this.print;
+    const jug = (await loadJugs(aspect))[size];
+    const group = new THREE.Group();
+    const shadow = this.shadow.clone();
+    shadow.scale.setScalar(size === 'gallon' ? 1.2 : 0.95);
+    shadow.material = (shadow.material as THREE.MeshBasicMaterial).clone();
+    (shadow.material as THREE.MeshBasicMaterial).opacity = 0.45; // light passes through a clear jug
+    group.add(shadow);
+    const jugGroup = new THREE.Group();
+    jugGroup.scale.setScalar(JUG_SCALE);
+    jugGroup.add(new THREE.Mesh(jug.body, this.jugMaterials(jug.capY * JUG_SCALE)));
+    const { material } = await this.printMaterial(TALL, 0, true);
+    jugGroup.add(new THREE.Mesh(jug.print, material));
+    group.add(jugGroup);
+    return group;
+  }
+
   private async build(spec: DrinkSpec) {
+    if (spec.container === 'half-gallon' || spec.container === 'gallon') return this.buildJug(spec.container);
     // Every drink comes in the same cup; only what is inside changes.
     const d = TALL;
     const seed = hashString(specKey(spec));

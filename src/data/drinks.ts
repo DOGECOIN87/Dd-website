@@ -45,6 +45,8 @@ const extras: Record<string, DrinkSpec> = {
   'Gummy Bears': { kind: 'empty', colors: [], gummies: true },
   Water: { kind: 'soda', colors: ['#e6f3f8'], ice: true, clear: true },
   'Extra Cup': { kind: 'empty', colors: [] },
+  'Extra ½ gallon set up': { kind: 'empty', colors: [], container: 'half-gallon' },
+  'Extra gallon set up': { kind: 'empty', colors: [], container: 'gallon' },
 };
 
 /** Picks the cup, colours and toppings that represent a menu item. */

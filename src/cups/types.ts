@@ -1,6 +1,6 @@
 /**
  * Describes one drink for the 3D cup renderer. Every drink is shown in the same clear
- * 24 oz cup; only what is inside changes. Every field is optional except `kind` and
+ * 24 oz cup (or, for the jug set-ups, a half-gallon or gallon jug); only what is inside changes. Every field is optional except `kind` and
  * `colors`; sensible defaults come from the kind.
  */
 export type CupKind =
@@ -12,6 +12,8 @@ export type CupKind =
 
 export interface DrinkSpec {
   kind: CupKind;
+  /** The container: the standard cup unless this is a jug. Jugs are shown empty, capped. */
+  container?: 'cup' | 'half-gallon' | 'gallon';
   /** Drink colors, top to bottom. */
   colors: string[];
   /** Spiral the colors around the cup instead of stacking them in layers. */
