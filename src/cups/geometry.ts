@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /**
  * Cup geometry, in "cup units" where the tall cup is 3 units high
@@ -75,7 +77,7 @@ export function cupGeometry(d: CupDims) {
     V(R + 0.006, top + 0.022), V(R + 0.03, top + 0.046), V(R + 0.044, top + 0.07),
     V(R + 0.036, top + 0.093), V(R + 0.014, h), V(R - 0.006, top + 0.09),
   );
-  return lathe(shell(outer, d.wall), 96, 0, h);
+  return lathe(shell(outer, d.wall), 128, 0, h);
 }
 
 /** Tall-cup texture height range; liquid textures map v = y / LIQUID_VMAX. */
@@ -90,8 +92,8 @@ export interface LiquidShape {
   pearlZone?: number;
 }
 
-/** Drink volume following the inside of the wall, with a meniscus or a lumpy frozen mound. */
-export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMAX) {
+/** Drink volume following the inside of the wall, with a meniscus or a heaped frozen top. */
+export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMAX, seed = 1) {
   const inset = d.wall + 0.012;
   const rAt = (y: number) => {
     let r = sideR(d, y) - inset;
@@ -107,28 +109,53 @@ export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMA
   }
   const rTop = rAt(shape.top);
   if (shape.mound) {
-    const r0 = rTop - 0.035;
-    for (let i = 1; i <= 24; i += 1) {
-      const th = (i / 24) * (Math.PI / 2);
-      points.push(V(Math.max(0, r0 * Math.cos(th)), shape.top + 0.01 + shape.mound * Math.sin(th)));
+    // Slush heaps up from the rim in a soft shoulder to a rounded crown.
+    const r0 = rTop - 0.03;
+    for (let i = 1; i <= 40; i += 1) {
+      const th = (i / 40) * (Math.PI / 2);
+      points.push(V(Math.max(0, r0 * Math.cos(th) ** 0.8), shape.top + 0.01 + shape.mound * Math.sin(th) ** 1.25));
     }
   } else {
     points.push(V(rTop - 0.012, shape.top + 0.012), V(rTop - 0.05, shape.top + 0.016), V(rTop * 0.5, shape.top + 0.016), V(0, shape.top + 0.016));
   }
-  const geo = lathe(points, 96, 0, vMax);
+  const geo = lathe(points, 128, 0, vMax);
   if (shape.mound) {
-    // Lumpy, scooped slush: displace the mound with a seamless 3D sum-of-sines field.
+    // Over the heap, run the texture by distance along the surface rather than height, which hardly
+    // changes across the crown: slush grain stays even instead of smearing into streaks. The heap
+    // takes the texture rows above the drink line (see liquidTexture).
+    const first = points.length - 40;
+    const arc = [0];
+    for (let j = first + 1; j < points.length; j += 1) arc.push(arc[arc.length - 1] + points[j].distanceTo(points[j - 1]));
+    const v0 = shape.top / vMax;
+    const k = (0.995 - v0) / arc[arc.length - 1];
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i += 1) {
+      const j = i % points.length;
+      if (j > first) uv.setY(i, v0 + arc[j - first] * k);
+    }
+    uv.needsUpdate = true;
+    // Poured slush settles in uneven folds that coil loosely toward an off-centre crown, with soft lumps everywhere.
+    const rand = mulberry(seed);
+    const lean = new THREE.Vector2(rand() - 0.5, rand() - 0.5).multiplyScalar(0.16);
+    const twist = rand() * Math.PI * 2;
     const pos = geo.attributes.position;
     const p = new THREE.Vector3();
+    const dir = new THREE.Vector3();
     for (let i = 0; i < pos.count; i += 1) {
       p.fromBufferAttribute(pos, i);
-      const k = smooth(shape.top, shape.top + 0.12, p.y);
+      const k = smooth(shape.top, shape.top + 0.14, p.y);
       if (k <= 0) continue;
-      const n = Math.sin(3.1 * p.x + 1.7 * p.z + 6.3 * p.y) * 0.5
+      const rad = Math.hypot(p.x, p.z);
+      const ang = Math.atan2(p.z, p.x);
+      const fold = Math.sin(ang + twist + (Math.PI * 2 * rad) / 0.27) * (0.6 + 0.4 * Math.sin(ang * 2 + twist));
+      const lumps = Math.sin(3.1 * p.x + 1.7 * p.z + 6.3 * p.y) * 0.5
         + Math.sin(5.3 * p.z - 4.1 * p.x + 3.1 * p.y) * 0.32
-        + Math.sin(9.7 * p.y + 7.1 * p.x - 6.9 * p.z) * 0.18;
-      const dir = new THREE.Vector3(p.x, (p.y - shape.top) * 0.8, p.z).normalize();
-      p.addScaledVector(dir, n * 0.045 * k);
+        + Math.sin(11.7 * p.y + 9.1 * p.x - 8.9 * p.z) * 0.18;
+      dir.set(p.x, (p.y - shape.top) * 0.9, p.z).normalize();
+      p.addScaledVector(dir, (fold * 0.02 + lumps * 0.026) * k);
+      const crown = k * k * (1 - rad / (rTop + 0.1));
+      p.x += lean.x * crown;
+      p.z += lean.y * crown;
       pos.setXYZ(i, p.x, p.y, p.z);
     }
     geo.computeVertexNormals();
@@ -136,81 +163,131 @@ export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMA
   return geo;
 }
 
-/** Curved band just outside the wall that carries the printed logo, centred on phi = π. */
-export function decalGeometry(d: CupDims, y0: number, y1: number, arc: number) {
-  const points: THREE.Vector2[] = [];
-  for (let i = 0; i <= 24; i += 1) {
-    const y = y0 + ((y1 - y0) * i) / 24;
-    points.push(V(sideR(d, y) + 0.0035, y));
-  }
-  return lathe(points, 48, y0, y1, Math.PI - arc / 2, arc);
-}
-
-/** Piped whipped cream: a tapering conical helix with star-tip ridges, plus a filled core. */
-export function whipGeometry(base: number) {
-  const pts: THREE.Vector3[] = [];
-  const N = 220;
-  for (let i = 0; i <= N; i += 1) {
-    const t = i / N;
-    const ang = t * Math.PI * 2 * 3.1;
-    const rad = 0.72 * (1 - t * 0.86);
-    pts.push(new THREE.Vector3(Math.cos(ang) * rad, base + 0.13 + t * 0.5, Math.sin(ang) * rad));
-  }
-  const curve = new THREE.CatmullRomCurve3(pts);
-  const segs = 320;
-  const radial = 24;
-  const geo = new THREE.TubeGeometry(curve, segs, 0.16, radial, false);
+/** A slightly irregular ice cube: rounded edges, faces not quite flat. */
+export function iceGeometry(seed: number) {
+  const geo = new RoundedBoxGeometry(1, 1, 1, 3, 0.18);
+  const rand = mulberry(seed);
   const pos = geo.attributes.position;
-  const c = new THREE.Vector3();
-  const v = new THREE.Vector3();
-  for (let i = 0; i <= segs; i += 1) {
-    const t = i / segs;
-    curve.getPointAt(t, c);
-    const taper = 1 - 0.55 * t;
-    for (let j = 0; j <= radial; j += 1) {
-      const idx = i * (radial + 1) + j;
-      v.fromBufferAttribute(pos, idx).sub(c);
-      const ridge = 1 + 0.16 * Math.cos((j / radial) * Math.PI * 2 * 8 + t * 18);
-      v.multiplyScalar(taper * ridge);
-      pos.setXYZ(idx, c.x + v.x, c.y + v.y, c.z + v.z);
-    }
+  const bumps = Array.from({ length: 3 }, () => [rand() * 6, rand() * 6, rand() * 6, 2 + rand() * 3] as const);
+  for (let i = 0; i < pos.count; i += 1) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    let n = 0;
+    for (const [a, b, c, f] of bumps) n += Math.sin(f * x + a) * Math.sin(f * y + b) * Math.sin(f * z + c);
+    const k = 1 + n * 0.03;
+    pos.setXYZ(i, x * k, y * k, z * k);
   }
   geo.computeVertexNormals();
   return geo;
 }
 
-/** Chocolate drizzle laid over the whipped cream. */
-export function drizzleOverWhipGeometry(base: number, seed: number) {
-  const rand = mulberry(seed);
-  const surfaceY = (r: number) => base + 0.2 + 0.4 * Math.max(0, 1 - r / 0.76);
-  const curves: THREE.BufferGeometry[] = [];
-  for (let k = 0; k < 4; k += 1) {
-    const pts: THREE.Vector3[] = [];
-    let ang = rand() * Math.PI * 2;
-    for (let i = 0; i < 9; i += 1) {
-      const r = i % 2 ? 0.08 + rand() * 0.15 : 0.5 + rand() * 0.22;
-      ang += 0.5 + rand() * 0.5;
-      pts.push(new THREE.Vector3(Math.cos(ang) * r, surfaceY(r), Math.sin(ang) * r));
-    }
-    curves.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 0.024, 8, false));
+/**
+ * Curved band just outside the wall that carries the printed logo, centred on phi = π.
+ * A second UV set (uv1) is in cup space, so the wall's condensation maps line up on the print.
+ */
+export function decalGeometry(d: CupDims, y0: number, y1: number, arc: number) {
+  const points: THREE.Vector2[] = [];
+  for (let i = 0; i <= 32; i += 1) {
+    const y = y0 + ((y1 - y0) * i) / 32;
+    points.push(V(sideR(d, y) + 0.003, y));
   }
-  return curves;
+  const geo = lathe(points, 64, y0, y1, Math.PI - arc / 2, arc);
+  const pos = geo.attributes.position;
+  const uv1 = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i += 1) {
+    const phi = Math.atan2(pos.getX(i), pos.getZ(i));
+    uv1[i * 2] = (phi < 0 ? phi + Math.PI * 2 : phi) / (Math.PI * 2);
+    uv1[i * 2 + 1] = pos.getY(i) / d.h;
+  }
+  geo.setAttribute('uv1', new THREE.BufferAttribute(uv1, 2));
+  return geo;
 }
 
-/** A strawberry: lathed heart profile with a calyx of flattened leaves. */
-export function strawberryGeometry() {
-  const profile = [V(0, -0.3), V(0.08, -0.28), V(0.17, -0.18), V(0.23, -0.04), V(0.25, 0.08), V(0.21, 0.18), V(0.11, 0.23), V(0, 0.22)];
-  const body = new THREE.LatheGeometry(new THREE.SplineCurve(profile).getPoints(24), 32);
-  const leaves: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 6; i += 1) {
-    const leaf = new THREE.ConeGeometry(0.06, 0.2, 6);
-    leaf.scale(1, 1, 0.25);
-    leaf.rotateZ(-Math.PI / 2 + 0.35);
-    leaf.translate(0.1, 0.23, 0);
-    leaf.rotateY((i / 6) * Math.PI * 2);
-    leaves.push(leaf);
+/**
+ * A dollop of whipped cream: a thick, soft rope wound about two and a half times, each fat
+ * coil slumping onto the one below, rising to a pointed tip that leans over. Only gentle
+ * folds run along it (no sharp nozzle ridges). Vertex colours carry the warm, peachy shading
+ * cream has where it folds under, since light scatters inside it rather than going grey.
+ */
+export function whipGeometry(base: number, seed: number) {
+  const rand = mulberry(seed);
+  const turns = 2.35 + rand() * 0.25;
+  const start = rand() * Math.PI * 2;
+  const lean = rand() * Math.PI * 2;
+  const R0 = 0.52;
+  const N = 360;
+  const pts: THREE.Vector3[] = [];
+  const thick: number[] = [];
+  const ph = [rand() * 6.3, rand() * 6.3, rand() * 6.3];
+  let climb = 0;
+  for (let i = 0; i <= N; i += 1) {
+    const t = i / N;
+    const turn = t * turns;
+    const ang = start + turn * Math.PI * 2;
+    const wobble = 1 + 0.06 * Math.sin(ang * 2 + ph[0]) + 0.03 * Math.sin(ang * 3 + ph[1]);
+    const rad = R0 * (1 - t) ** 1.1 * wobble;
+    // The first ring is laid nearly flat on the drink; every later turn rises about one rope
+    // thickness, so each coil sits on the one below. The last stretch climbs into the tip,
+    // which leans to one side.
+    if (i) climb += (turns / N) * (0.1 + 0.25 * smooth(0.75, 1.1, turn));
+    const tip = smooth(0.74, 1, t);
+    const y = base + 0.05 + climb + 0.3 * tip ** 1.4 + 0.02 * Math.sin(ang * 1.3 + ph[2]);
+    const bend = 0.16 * tip ** 2;
+    pts.push(new THREE.Vector3(Math.cos(ang) * rad + Math.cos(lean) * bend, y, Math.sin(ang) * rad + Math.sin(lean) * bend));
+    thick.push(0.27 * (1 - 0.4 * t) * (0.6 + 0.4 * smooth(0, 0.05, t)) * (1 - smooth(0.8, 1.02, t)) ** 0.55
+      * (1 + 0.07 * Math.sin(ang * 3 + ph[1])));
   }
-  return { body, leaves };
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const segs = 480;
+  const radial = 48;
+  const geo = new THREE.TubeGeometry(curve, segs, 1, radial, false);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const c = new THREE.Vector3();
+  const v = new THREE.Vector3();
+  for (let i = 0; i <= segs; i += 1) {
+    const t = i / segs;
+    curve.getPointAt(t, c);
+    const k = Math.min(N, t * N);
+    const k0 = Math.floor(k);
+    const r = thick[k0] + (thick[Math.min(N, k0 + 1)] - thick[k0]) * (k - k0);
+    for (let j = 0; j <= radial; j += 1) {
+      const idx = i * (radial + 1) + j;
+      v.fromBufferAttribute(pos, idx).sub(c);
+      const a = (j / radial) * Math.PI * 2;
+      // Soft folds where the cream creased leaving the nozzle, drifting round as it was piped.
+      const fold = Math.cos(a * 5 + t * 7 + ph[0]);
+      const crease = 1 - 0.05 * Math.max(0, fold) ** 6 + 0.025 * fold + 0.015 * Math.sin(a * 11 + i * 0.13);
+      const down = Math.max(0, -v.y);
+      v.multiplyScalar(r * crease);
+      v.y *= v.y < 0 ? 0.6 : 0.9; // slumped onto the coil below
+      pos.setXYZ(idx, c.x + v.x, c.y + v.y, c.z + v.z);
+      const shade = 1 - 0.5 * down ** 1.1 - 0.1 * Math.max(0, fold) ** 6;
+      colors[idx * 3] = 0.9 + 0.1 * shade;
+      colors[idx * 3 + 1] = 0.78 + 0.22 * shade;
+      colors[idx * 3 + 2] = 0.7 + 0.3 * shade;
+    }
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** A gummy bear about one unit tall: belly, head, ears, arms and legs. */
+export function gummyBearGeometry() {
+  const part = (sx: number, sy: number, sz: number, x: number, y: number, z = 0) => {
+    const g = new THREE.SphereGeometry(1, 14, 10);
+    g.scale(sx, sy, sz);
+    g.translate(x, y, z);
+    return g;
+  };
+  const bear = mergeGeometries([
+    part(0.3, 0.34, 0.22, 0, -0.08), part(0.25, 0.22, 0.2, 0, 0.3), part(0.08, 0.08, 0.07, -0.17, 0.47), part(0.08, 0.08, 0.07, 0.17, 0.47),
+    part(0.1, 0.16, 0.1, -0.29, 0.02), part(0.1, 0.16, 0.1, 0.29, 0.02), part(0.13, 0.12, 0.12, -0.16, -0.38, 0.04), part(0.13, 0.12, 0.12, 0.16, -0.38, 0.04),
+  ])!;
+  bear.computeVertexNormals();
+  return bear;
 }
 
 export function mulberry(seed: number) {

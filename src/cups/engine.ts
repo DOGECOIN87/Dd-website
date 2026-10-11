@@ -1,13 +1,10 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import {
-  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, drizzleOverWhipGeometry, liquidGeometry, mulberry, sideR,
-  sideTop, strawberryGeometry, whipGeometry,
+  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceGeometry, liquidGeometry,
+  mulberry, sideR, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
-import {
-  condensationNormalMap, limeTexture, liquidTexture, logoTexture, luminance, shadowTexture, slushNormalMap, strawberryTexture,
-} from './textures';
+import { condensationMaps, iceNormalMap, liquidTexture, printTexture, shadowTexture, slushNormalMap } from './textures';
 import { specKey, type DrinkSpec } from './types';
 
 /**
@@ -17,21 +14,45 @@ import { specKey, type DrinkSpec } from './types';
  * menu can show dozens of live 3D cups.
  */
 
-const TURN_SECONDS = 6; // one revolution every 6 s while hovered or selected
-const SPIN_SPEED = (Math.PI * 2) / TURN_SECONDS;
-const EASE_SECONDS = 0.45; // time to spin up to speed, and to glide to a stop
-const REST_ANGLE = -0.35; // logo faces the viewer, turned slightly
-const FRAME_MS = 1000 / 30;
+const TAU = Math.PI * 2;
+const TURN_SECONDS = 5; // one revolution every 5 s while hovered or selected
+const SPIN_SPEED = TAU / TURN_SECONDS;
+const SPIN_UP = SPIN_SPEED / 0.5; // reaches full speed in half a second
+const GLIDE = 0.9; // radians: the last stretch of a turn eases out to the front
+const MIN_GLIDE = 0.2; // closer than this to the front and the cup goes round once more rather than braking hard
+const REST_ANGLE = -0.18; // the print faces the viewer, turned just enough to read as round
+const FRAME_FAST = 1000 / 60; // one or two cups spinning
+const FRAME_SLOW = 1000 / 30; // a phone with a screenful of spinning cups
+
+/** Camera: a product shot from slightly above the rim, framed to the cup now that drinks have no straws. */
+const CAMERA_FOV = 17.5;
+const CAMERA_TARGET_Y = 1.78;
+const CAMERA_ELEVATION = THREE.MathUtils.degToRad(8);
+const CAMERA_DISTANCE = 15;
+
+/** The print: about 100° of the wall, centred a little above half height. */
+const PRINT_WIDTH = 1.42;
+const PRINT_MID_Y = 1.5;
+
+interface Glide {
+  from: number;
+  dist: number;
+  t: number;
+  duration: number;
+}
 
 interface Handle {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   key: string;
   spec: DrinkSpec;
-  /** Hovered, focused or tapped: the cup spins while true and glides to a stop after. */
+  /** Hovered, focused or on screen on a phone: the cup spins while true. */
   active: boolean;
+  /** 0 = at rest with the print facing front. */
   angle: number;
   velocity: number;
+  /** Set once the cup has been let go and is easing into the front. */
+  glide: Glide | null;
   visible: boolean;
   w: number;
   h: number;
@@ -39,20 +60,26 @@ interface Handle {
 }
 
 /**
- * Makes MeshPhysicalMaterial behave like thin clear PET on a transparent canvas:
- * where nothing is behind the wall the plastic fades to a faint haze, while its
- * specular reflections (window streaks, droplet glints) stay fully bright.
+ * Makes MeshPhysicalMaterial behave like clear plastic (or ice, or water) on a
+ * transparent canvas: where nothing is behind it the material fades to a faint
+ * haze, while its reflections (softbox streaks, droplet glints) stay bright.
+ * Rough areas of the surface (condensation mist) also fog what is behind them.
  */
-function clearPlastic(material: THREE.MeshPhysicalMaterial, haze: number) {
+function clearPlastic(material: THREE.MeshPhysicalMaterial, haze: number, frost = 0, edge = 0) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uHaze = { value: haze };
-    shader.fragmentShader = `uniform float uHaze;\n${shader.fragmentShader}`
+    shader.uniforms.uFrost = { value: frost };
+    shader.uniforms.uEdge = { value: edge };
+    shader.fragmentShader = `uniform float uHaze;\nuniform float uFrost;\nuniform float uEdge;\n${shader.fragmentShader}`
       .replace('#include <transmission_fragment>', THREE.ShaderChunk.transmission_fragment.replace(
         'material.transmissionAlpha = mix( material.transmissionAlpha, transmitted.a, material.transmission );',
         `float cover = clamp( ( transmitted.a - 0.5 ) * 2.0, 0.0, 1.0 );
         vec3 behind = clamp( ( transmitted.rgb - vec3( 1.0 - cover ) * 0.97 ) / max( cover, 1e-3 ), 0.0, 8.0 );
         transmitted.rgb = mix( vec3( 0.93, 0.96, 0.97 ), behind, smoothstep( 0.0, 0.25, cover ) );
-        material.transmissionAlpha = mix( material.transmissionAlpha, max( cover, uHaze ), material.transmission );`,
+        float mist = uFrost * smoothstep( 0.06, 0.1, material.roughness );
+        transmitted.rgb = mix( transmitted.rgb, vec3( 0.95, 0.965, 0.975 ), mist );
+        transmitted.rgb *= 1.0 - uEdge * pow( 1.0 - clamp( dot( normal, normalize( vViewPosition ) ), 0.0, 1.0 ), 2.0 );
+        material.transmissionAlpha = mix( material.transmissionAlpha, max( cover, uHaze + mist * 0.35 ), material.transmission );`,
       ))
       .replace('#include <opaque_fragment>', `
         #ifdef USE_TRANSMISSION
@@ -61,11 +88,31 @@ function clearPlastic(material: THREE.MeshPhysicalMaterial, haze: number) {
         float glint = clamp( dot( totalSpecular, vec3( 0.2126, 0.7152, 0.0722 ) ) * 2.2, 0.0, 1.0 );
         gl_FragColor = vec4( outgoingLight, max( diffuseColor.a, glint ) );`);
   };
-  material.customProgramCacheKey = () => `clear-plastic-${haze}`;
+  material.customProgramCacheKey = () => 'clear-plastic';
   return material;
 }
 
-/** Product-photo studio: tall softboxes either side, a top light, and a pink accent card. */
+/**
+ * Drinks seen through a wall look deeper and richer toward the cup's edges,
+ * where the light travels through more of them, rather than evenly painted.
+ */
+function drinkShading(material: THREE.MeshPhysicalMaterial, depth: number) {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uDepth = { value: depth };
+    shader.fragmentShader = `uniform float uDepth;\n${shader.fragmentShader}`.replace('#include <opaque_fragment>', `
+      float facing = clamp( dot( geometryNormal, geometryViewDir ), 0.0, 1.0 );
+      outgoingLight = mix( outgoingLight, outgoingLight * diffuseColor.rgb * 1.2, pow( 1.0 - facing, 1.5 ) * uDepth );
+      #include <opaque_fragment>`);
+  };
+  material.customProgramCacheKey = () => 'drink';
+  return material;
+}
+
+/**
+ * Product-photo studio: a tall softbox front left and a strip light right give the
+ * long highlights you see on a real plastic cup, two narrow back strips outline
+ * the clear wall against the background, and a top light catches the rim.
+ */
 function studioEnvironment(renderer: THREE.WebGLRenderer) {
   const env = new THREE.Scene();
   const basic = (color: THREE.ColorRepresentation, intensity: number) => {
@@ -73,10 +120,10 @@ function studioEnvironment(renderer: THREE.WebGLRenderer) {
     m.color.multiplyScalar(intensity);
     return m;
   };
-  const room = new THREE.Mesh(new THREE.BoxGeometry(24, 14, 24), basic('#6d6870', 0.42));
+  const room = new THREE.Mesh(new THREE.BoxGeometry(24, 14, 24), basic('#7c767c', 0.5));
   room.material.side = THREE.BackSide;
   env.add(room);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), basic('#d8cfc6', 0.55));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 24), basic('#e2d9d2', 0.6));
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -6.9;
   env.add(floor);
@@ -86,13 +133,15 @@ function studioEnvironment(renderer: THREE.WebGLRenderer) {
     mesh.lookAt(0, 0, 0);
     env.add(mesh);
   };
-  panel(2.6, 10, '#ffffff', 9, [-7.5, 1, 3.5]); // key softbox, front left
-  panel(1.1, 10, '#ffffff', 6, [7.5, 1, 1.5]); // strip light, right
-  panel(9, 6, '#ffffff', 2.4, [0, 6.9, 0]); // overhead
-  panel(10, 7, '#fff6ee', 1.1, [0, 0, 11.5]); // soft fill behind camera
-  panel(3, 8, '#ff7fb3', 2.2, [5, 0, -9]); // brand-pink accent behind the cup
+  panel(3, 10, '#ffffff', 8, [-7.5, 1, 4]); // key softbox, front left
+  panel(0.9, 10, '#ffffff', 6.5, [7.5, 1, 2]); // strip light, right
+  panel(0.7, 10, '#ffffff', 4, [-6, 1, -6]); // back strips: edge definition on both sides
+  panel(0.7, 10, '#ffffff', 4, [6, 1, -6]);
+  panel(9, 6, '#ffffff', 2.2, [0, 6.9, 0]); // overhead
+  panel(10, 7, '#fff6f2', 1, [0, 0, 11.5]); // soft fill behind camera
+  panel(4, 8, '#ffe9f1', 0.9, [0, 0, -9]); // warm card behind the cup
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const target = pmrem.fromScene(env, 0.035);
+  const target = pmrem.fromScene(env, 0.03);
   pmrem.dispose();
   return target.texture;
 }
@@ -102,6 +151,11 @@ const hashString = (s: string) => {
   for (let i = 0; i < s.length; i += 1) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0;
 };
+
+interface Condensation {
+  normal: THREE.Texture;
+  roughness: THREE.Texture;
+}
 
 class CupEngine {
   readonly renderer: THREE.WebGLRenderer;
@@ -117,6 +171,8 @@ class CupEngine {
   private last = 0;
   /** Smoothed cost of drawing one frame of cups, used to back off on slow devices. */
   private cost = 0;
+  /** Cups that turned last frame. */
+  private spinning = 0;
   private raf = 0;
   private reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   private readonly io: IntersectionObserver;
@@ -125,11 +181,18 @@ class CupEngine {
   // Shared resources
   private readonly cupGeo = new Map<CupDims, THREE.BufferGeometry>();
   private readonly cupMat = new Map<string, THREE.MeshPhysicalMaterial>();
+  private readonly condensation = new Map<string, Condensation>();
+  private readonly printMat = new Map<string, THREE.MeshPhysicalMaterial>();
   private readonly slush = slushNormalMap();
+  /** The same fine relief, run along the piped whipped cream. */
+  private readonly creamGrain = (() => {
+    const t = this.slush.clone();
+    t.repeat.set(48, 6);
+    return t;
+  })();
   private readonly shadow: THREE.Mesh;
-  private readonly logos = new Map<string, Promise<THREE.Texture>>();
-  private strawberry?: THREE.Group;
-  private lime?: THREE.Mesh;
+  private print?: Promise<{ map: THREE.Texture; aspect: number }>;
+  private ice?: { geos: THREE.BufferGeometry[]; mat: THREE.MeshPhysicalMaterial };
 
   constructor() {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -138,14 +201,14 @@ class CupEngine {
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     this.scene.environment = studioEnvironment(this.renderer);
-    const key = new THREE.DirectionalLight('#ffffff', 1.7);
+    const key = new THREE.DirectionalLight('#ffffff', 1.6);
     key.position.set(-5, 7, 6);
-    const rim = new THREE.DirectionalLight('#ffd9ea', 0.7);
+    const rim = new THREE.DirectionalLight('#fff0f4', 0.6);
     rim.position.set(4, 3, -6);
-    this.scene.add(key, rim, new THREE.HemisphereLight('#ffffff', '#c9b9ad', 0.35));
+    this.scene.add(key, rim, new THREE.HemisphereLight('#ffffff', '#c9b9ad', 0.4));
 
     const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false });
-    this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5), shadowMat);
+    this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.6), shadowMat);
     this.shadow.rotation.x = -Math.PI / 2;
     this.shadow.position.y = 0.002;
     this.shadow.renderOrder = -1;
@@ -181,7 +244,7 @@ class CupEngine {
     if (!ctx) return { dispose: () => undefined, setActive: () => undefined };
     const key = specKey(spec);
     const handle: Handle = {
-      canvas, ctx, key, spec, active: false, angle: 0, velocity: 0, visible: false, w: 0, h: 0, dirty: true,
+      canvas, ctx, key, spec, active: false, angle: 0, velocity: 0, glide: null, visible: false, w: 0, h: 0, dirty: true,
     };
     this.handles.add(handle);
     this.byCanvas.set(canvas, handle);
@@ -202,15 +265,52 @@ class CupEngine {
     };
   }
 
-  /** Eases a cup's spin up while active and down to a stop after. Returns true if it turned. */
-  private advance(handle: Handle, dt: number) {
-    const target = handle.active && !this.reduced.matches ? SPIN_SPEED : 0;
-    const step = (SPIN_SPEED / EASE_SECONDS) * dt;
-    handle.velocity = target > handle.velocity
-      ? Math.min(target, handle.velocity + step)
-      : Math.max(target, handle.velocity - step);
-    if (handle.velocity <= 0) return false;
-    handle.angle = (handle.angle + handle.velocity * dt) % (Math.PI * 2);
+  /**
+   * Turns a cup by `dt` seconds. While active it spins up to speed and keeps turning.
+   * Let go, it finishes its turn: it carries on round and, over the last stretch,
+   * eases out to rest with the print facing front. Returns true if it moved.
+   */
+  private advance(h: Handle, dt: number): boolean {
+    if (this.reduced.matches) {
+      const moved = h.angle !== 0;
+      h.angle = 0;
+      h.velocity = 0;
+      h.glide = null;
+      return moved;
+    }
+    if (h.active) {
+      h.glide = null;
+      h.velocity = Math.min(SPIN_SPEED, h.velocity + SPIN_UP * dt);
+      h.angle = (h.angle + h.velocity * dt) % TAU;
+      return h.velocity > 0;
+    }
+    if (h.glide) {
+      const g = h.glide;
+      g.t = Math.min(g.duration, g.t + dt);
+      const s = g.t / g.duration;
+      // Cubic ease-out: starts at the cup's own speed, lands with no jolt.
+      h.angle = g.from + g.dist * (1 - (1 - s) ** 3);
+      h.velocity = (3 * g.dist * (1 - s) ** 2) / g.duration;
+      if (s >= 1) {
+        h.angle = 0;
+        h.velocity = 0;
+        h.glide = null;
+      }
+      return true;
+    }
+    if (h.angle === 0) {
+      h.velocity = 0;
+      return false;
+    }
+    let remaining = TAU - h.angle;
+    if (remaining < MIN_GLIDE) remaining += TAU;
+    if (remaining <= GLIDE) {
+      const speed = Math.max(h.velocity, SPIN_SPEED * 0.5);
+      h.glide = { from: h.angle, dist: remaining, t: 0, duration: (3 * remaining) / speed };
+      return this.advance(h, dt);
+    }
+    h.velocity = Math.min(SPIN_SPEED, h.velocity + SPIN_UP * dt);
+    h.angle = (h.angle + h.velocity * dt) % TAU;
     return true;
   }
 
@@ -258,21 +358,26 @@ class CupEngine {
   private frame = (now: number) => {
     this.raf = 0;
     // Never spend more than about a third of the main thread on cups: slow GPUs get fewer frames, not jank.
-    if (now - this.last < Math.max(FRAME_MS - 2, this.cost * 3)) {
+    const interval = Math.max(this.spinning > 2 ? FRAME_SLOW : FRAME_FAST, this.cost * 3);
+    if (now - this.last < interval - 2) {
       this.kick();
       return;
     }
-    const dt = this.last ? Math.min(0.1, (now - this.last) / 1000) : 0;
+    // Advance by the real time elapsed, so a throttled cup still turns at the right speed.
+    const dt = this.last ? Math.min(0.5, (now - this.last) / 1000) : 0;
     this.last = now;
     const start = performance.now();
     let busy = false;
+    let spinning = 0;
     for (const handle of this.handles) {
       const turned = this.advance(handle, dt);
-      if (handle.velocity > 0 || handle.active) busy = true;
+      if (turned || handle.active) busy = true;
       if (!handle.visible || !handle.w) continue;
+      if (turned) spinning += 1;
       if ((turned || handle.dirty) && this.draw(handle)) handle.dirty = false;
       if (handle.dirty) busy = true; // still waiting for its drink to finish building
     }
+    this.spinning = spinning;
     this.cost = this.cost * 0.8 + (performance.now() - start) * 0.2;
     // Idle when nothing is spinning: still cups cost nothing after their first frame.
     if (busy) this.kick();
@@ -283,9 +388,9 @@ class CupEngine {
     const id = `${w}x${h}`;
     let cam = this.cameras.get(id);
     if (!cam) {
-      cam = new THREE.PerspectiveCamera(20, w / h, 1, 60);
-      cam.position.set(0, 3.55, 15);
-      cam.lookAt(0, 2.2, 0);
+      cam = new THREE.PerspectiveCamera(CAMERA_FOV, w / h, 1, 60);
+      cam.position.set(0, CAMERA_TARGET_Y + Math.tan(CAMERA_ELEVATION) * CAMERA_DISTANCE, CAMERA_DISTANCE);
+      cam.lookAt(0, CAMERA_TARGET_Y, 0);
       this.cameras.set(id, cam);
     }
     return cam;
@@ -315,50 +420,70 @@ class CupEngine {
 
   // ---------------------------------------------------------------- building
 
+  /** Condensation maps for a cup whose drink line (cold area) ends at `coldTop`. */
+  private condensationFor(d: CupDims, coldTop: number) {
+    const id = `${d.h}:${coldTop.toFixed(2)}`;
+    let c = this.condensation.get(id);
+    if (!c) {
+      c = condensationMaps(d.h, coldTop);
+      this.condensation.set(id, c);
+    }
+    return c;
+  }
+
   /** `coldTop` is the drink line; condensation only forms below it. 0 = a dry, empty cup. */
   private cupMaterial(d: CupDims, coldTop: number) {
     const id = `${d.h}:${coldTop.toFixed(2)}`;
     let m = this.cupMat.get(id);
     if (!m) {
-      const dry = coldTop <= 0;
+      const wet = coldTop > 0 ? this.condensationFor(d, coldTop) : null;
       m = clearPlastic(new THREE.MeshPhysicalMaterial({
-        color: '#ffffff', roughness: 0.07, metalness: 0, transmission: 1, thickness: 0.22, ior: 1.57,
-        envMapIntensity: dry ? 1.9 : 1.3, normalMap: dry ? null : condensationNormalMap(d.h, coldTop),
-        normalScale: new THREE.Vector2(1.1, 1.1), transparent: true, depthWrite: false,
-      }), dry ? 0.12 : 0.06);
+        color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.2, ior: 1.57,
+        roughness: wet ? 1 : 0.05, roughnessMap: wet?.roughness ?? null,
+        normalMap: wet?.normal ?? null, normalScale: new THREE.Vector2(0.9, 0.9),
+        envMapIntensity: wet ? 1.15 : 1.7, transparent: true, depthWrite: false,
+      }), wet ? 0.06 : 0.12, wet ? 0.06 : 0, wet ? 0 : 0.35);
       this.cupMat.set(id, m);
     }
     return m;
   }
 
-  private logo(ink: 'dark' | 'light') {
-    let p = this.logos.get(ink);
-    if (!p) {
-      p = logoTexture(ink);
-      this.logos.set(ink, p);
+  /**
+   * Black one-colour print, on the outside of the wall: under the same condensation
+   * as the plastic around it. On a see-through cup it shows, reversed, through the back.
+   */
+  private async printMaterial(d: CupDims, coldTop: number, seeThrough: boolean) {
+    const id = `${d.h}:${coldTop.toFixed(2)}:${seeThrough}`;
+    this.print ??= printTexture();
+    const { map, aspect } = await this.print;
+    let m = this.printMat.get(id);
+    if (!m) {
+      const wet = coldTop > 0 ? this.condensationFor(d, coldTop) : null;
+      const onPrint = (t: THREE.Texture) => {
+        const c = t.clone();
+        c.channel = 1;
+        return c;
+      };
+      m = new THREE.MeshPhysicalMaterial({
+        map, transparent: true, depthWrite: false, metalness: 0,
+        roughness: wet ? 1.4 : 0.4, roughnessMap: wet ? onPrint(wet.roughness) : null,
+        normalMap: wet ? onPrint(wet.normal) : null, normalScale: new THREE.Vector2(0.9, 0.9),
+        side: seeThrough ? THREE.DoubleSide : THREE.FrontSide,
+      });
+      this.printMat.set(id, m);
     }
-    return p;
+    return { material: m, aspect };
   }
 
-  private strawberryMesh() {
-    if (!this.strawberry) {
-      const { body, leaves } = strawberryGeometry();
-      const g = new THREE.Group();
-      g.add(new THREE.Mesh(body, new THREE.MeshPhysicalMaterial({ map: strawberryTexture(), roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.25 })));
-      const leafMat = new THREE.MeshStandardMaterial({ color: '#3f8a3a', roughness: 0.6 });
-      leaves.forEach((leaf) => g.add(new THREE.Mesh(leaf, leafMat)));
-      this.strawberry = g;
+  private iceKit() {
+    if (!this.ice) {
+      const mat = clearPlastic(new THREE.MeshPhysicalMaterial({
+        color: '#ffffff', roughness: 0.14, transmission: 1, thickness: 0.35, ior: 1.31, envMapIntensity: 1.8,
+        normalMap: iceNormalMap(), normalScale: new THREE.Vector2(0.6, 0.6), transparent: true, depthWrite: false,
+      }), 0.45, 0.3, 0.6);
+      this.ice = { geos: [1, 2, 3, 4].map(iceGeometry), mat };
     }
-    return this.strawberry.clone();
-  }
-
-  private limeMesh() {
-    if (!this.lime) {
-      const face = new THREE.MeshPhysicalMaterial({ map: limeTexture(), roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.2 });
-      const rind = new THREE.MeshStandardMaterial({ color: '#4f8f2a', roughness: 0.5 });
-      this.lime = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.07, 40), [rind, face, face]);
-    }
-    return this.lime.clone();
+    return this.ice;
   }
 
   private async build(spec: DrinkSpec) {
@@ -375,12 +500,17 @@ class CupEngine {
     }
     const shadow = this.shadow.clone();
     shadow.scale.setScalar(d.rTop / TALL.rTop);
+    if (spec.kind === 'empty' || spec.clear) {
+      // Light passes through a clear cup: its shadow is faint.
+      shadow.material = (shadow.material as THREE.MeshBasicMaterial).clone();
+      (shadow.material as THREE.MeshBasicMaterial).opacity = 0.45;
+    }
     group.add(shadow);
 
     // The drink
     const shape: LiquidShape = (() => {
       switch (spec.kind) {
-        case 'frozen': return { top: d.h - 0.08, mound: 0.42 };
+        case 'frozen': return { top: d.h - 0.08, mound: 0.38 };
         case 'latte': return { top: d.h - 0.12 };
         case 'boba': return { top: d.h - 0.18, pearlZone: 0.85 };
         case 'shot': return { top: d.h * 0.7 };
@@ -388,32 +518,42 @@ class CupEngine {
       }
     })();
     const vMax = shot ? d.h * 1.2 : LIQUID_VMAX;
-    if (spec.kind !== 'empty' && !spec.gummies) {
+    if (spec.clear) {
+      const water = clearPlastic(new THREE.MeshPhysicalMaterial({
+        color: spec.colors[0] ?? '#eef7fb', roughness: 0.03, transmission: 1, thickness: 1.4, ior: 1.33,
+        attenuationColor: new THREE.Color('#cfe9f2'), attenuationDistance: 4, transparent: true, depthWrite: false,
+      }), 0.015);
+      group.add(new THREE.Mesh(liquidGeometry(d, shape, vMax, seed), water));
+    } else if (spec.kind !== 'empty' && !spec.gummies) {
       const finish = spec.kind === 'frozen'
-        ? { roughness: 0.4, clearcoat: 0.45, clearcoatRoughness: 0.35, sheen: 0.5, sheenRoughness: 0.6, sheenColor: new THREE.Color('#ffffff'), normalMap: this.slush, normalScale: new THREE.Vector2(0.3, 0.3) }
+        ? { roughness: 0.48, clearcoat: 0.55, clearcoatRoughness: 0.22, sheen: 0.5, sheenRoughness: 0.55, sheenColor: new THREE.Color('#ffffff'), normalMap: this.slush, normalScale: new THREE.Vector2(0.2, 0.2) }
         : spec.jello
           ? { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05 }
           : spec.kind === 'soda' || spec.kind === 'shot'
             ? { roughness: 0.14, clearcoat: 0.7, clearcoatRoughness: 0.1 }
             : { roughness: 0.32, clearcoat: 0.35, clearcoatRoughness: 0.3 };
-      const material = new THREE.MeshPhysicalMaterial({ map: liquidTexture(spec, shape.top, seed, vMax), ...finish });
-      group.add(new THREE.Mesh(liquidGeometry(d, shape, vMax), material));
+      const material = drinkShading(new THREE.MeshPhysicalMaterial({ map: liquidTexture(spec, shape.top, seed, vMax), ...finish }), spec.kind === 'frozen' ? 0.5 : 0.35);
+      group.add(new THREE.Mesh(liquidGeometry(d, shape, vMax, seed), material));
     }
 
     if (spec.pearls) {
       const pearlGeo = new THREE.SphereGeometry(0.082, 18, 12);
-      const pearlMat = new THREE.MeshPhysicalMaterial({ color: '#24140d', roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.3, sheenColor: new THREE.Color('#7a5134') });
+      // Tapioca: dark brown, softly glossy and a little translucent (a warm sheen at the edges), not mirror-black.
+      const pearlMat = new THREE.MeshPhysicalMaterial({
+        color: '#2e1609', roughness: 0.38, clearcoat: 0.45, clearcoatRoughness: 0.25, envMapIntensity: 0.55,
+        sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#5a2f17'),
+      });
       const spots: THREE.Matrix4[] = [];
       for (let y = 0.19; y <= 0.86; y += 0.152) {
         const r = sideR(d, y) - d.wall - 0.012 - 0.088;
         const count = Math.floor((Math.PI * 2 * r) / 0.172);
         const offset = rand() * 6.28;
         for (let i = 0; i < count; i += 1) {
-          const a = offset + (i / count) * Math.PI * 2 + (rand() - 0.5) * 0.08;
-          const s = 0.92 + rand() * 0.14;
+          const a = offset + (i / count) * Math.PI * 2 + (rand() - 0.5) * 0.1;
+          const s = 0.86 + rand() * 0.22;
           spots.push(new THREE.Matrix4().compose(
-            new THREE.Vector3(Math.cos(a) * r, y + (rand() - 0.5) * 0.03, Math.sin(a) * r),
-            new THREE.Quaternion(), new THREE.Vector3(s, s, s),
+            new THREE.Vector3(Math.cos(a) * r, y + (rand() - 0.5) * 0.04, Math.sin(a) * r),
+            new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, 0)), new THREE.Vector3(s, s * (0.92 + rand() * 0.1), s),
           ));
         }
       }
@@ -424,100 +564,77 @@ class CupEngine {
 
     if (spec.gummies) {
       const colors = ['#e8434f', '#f7c443', '#5fbf4a', '#f28a2e', '#f6f0e4', '#d8366f'];
-      const geoG = new THREE.SphereGeometry(1, 16, 12);
-      const matG = new THREE.MeshPhysicalMaterial({ roughness: 0.22, clearcoat: 0.8, clearcoatRoughness: 0.15, sheen: 0.4 });
-      const n = 26;
-      const gummies = new THREE.InstancedMesh(geoG, matG, n);
+      const matG = new THREE.MeshPhysicalMaterial({ roughness: 0.22, clearcoat: 0.8, clearcoatRoughness: 0.15, sheen: 0.4, sheenRoughness: 0.4 });
+      const n = 22;
+      const gummies = new THREE.InstancedMesh(gummyBearGeometry(), matG, n);
       for (let i = 0; i < n; i += 1) {
         const y = 0.12 + (i / n) * 0.42 + rand() * 0.05;
         const r = (sideR(d, y) - 0.15) * Math.sqrt(rand());
         const a = rand() * Math.PI * 2;
         const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
-        gummies.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r), q, new THREE.Vector3(0.1, 0.14, 0.08)));
+        gummies.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r), q, new THREE.Vector3(0.24, 0.24, 0.24)));
         gummies.setColorAt(i, new THREE.Color(colors[i % colors.length]));
       }
       group.add(gummies);
     }
 
     if (spec.whip) {
-      const cream = new THREE.MeshPhysicalMaterial({ color: '#fbf5ea', roughness: 0.62, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff') });
-      group.add(new THREE.Mesh(whipGeometry(shape.top), cream));
-      const core = new THREE.Mesh(new THREE.SphereGeometry(0.62, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), cream);
-      core.scale.y = 0.55;
-      core.position.y = shape.top + 0.02;
+      const whipMat = new THREE.MeshPhysicalMaterial({
+        color: '#fffaf2', vertexColors: true, roughness: 0.5, sheen: 0.45, sheenRoughness: 0.5, sheenColor: new THREE.Color('#fff4ea'),
+        normalMap: this.creamGrain, normalScale: new THREE.Vector2(0.06, 0.06),
+      });
+      group.add(new THREE.Mesh(whipGeometry(shape.top, seed), whipMat));
+      const core = new THREE.Mesh(
+        new THREE.SphereGeometry(0.3, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshPhysicalMaterial({ color: '#f3e6d6', roughness: 0.6 }),
+      );
+      core.scale.y = 1.6;
+      core.position.y = shape.top - 0.06;
       group.add(core);
-      const choc = new THREE.MeshPhysicalMaterial({ color: '#3a1a0d', roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.1 });
-      drizzleOverWhipGeometry(shape.top, seed).forEach((g) => group.add(new THREE.Mesh(g, choc)));
     }
 
     if (spec.ice) {
-      const iceGeo = new RoundedBoxGeometry(0.34, 0.34, 0.34, 3, 0.07);
-      const iceMat = new THREE.MeshPhysicalMaterial({ color: '#e4f1f6', roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.4, normalMap: this.slush, normalScale: new THREE.Vector2(0.25, 0.25) });
-      // A floating layer plus a couple of cubes heaped above the rim, like a fresh pour.
-      for (let i = 0; i < 8; i += 1) {
-        const cube = new THREE.Mesh(iceGeo, iceMat);
-        const upper = i >= 6;
-        const a = (i / 6) * Math.PI * 2 + rand() * 0.5;
-        const r = upper ? 0.12 + rand() * 0.18 : i === 5 ? 0.05 : 0.38 + rand() * 0.14;
-        cube.position.set(Math.cos(a) * r, shape.top + (upper ? 0.28 : 0.05) + rand() * 0.07, Math.sin(a) * r);
-        cube.rotation.set(rand() * 0.6, rand() * 3, rand() * 0.6);
+      // Cubes floating at the surface, a couple heaped above it, as in a fresh pour.
+      const { geos, mat } = this.iceKit();
+      for (let i = 0; i < 10; i += 1) {
+        const upper = i >= 7;
+        const a = (i / 7) * Math.PI * 2 + rand() * 0.6;
+        const r = upper ? 0.08 + rand() * 0.24 : i === 6 ? 0.05 : 0.36 + rand() * 0.16;
+        const cube = new THREE.Mesh(geos[i % geos.length], mat);
+        cube.scale.set(0.3 + rand() * 0.07, 0.27 + rand() * 0.07, 0.3 + rand() * 0.07);
+        cube.position.set(Math.cos(a) * r, shape.top + (upper ? 0.3 + rand() * 0.1 : 0.06 + rand() * 0.04), Math.sin(a) * r);
+        cube.rotation.set((rand() - 0.5) * 0.7, rand() * 3, (rand() - 0.5) * 0.7);
         group.add(cube);
       }
-    }
-
-    if (spec.strawberry) {
-      const berry = this.strawberryMesh();
-      const mound = shape.mound ?? 0;
-      // Resting on the slush near the rim, clear of the straw.
-      berry.position.set(-0.42, shape.top + mound * 0.75 + 0.14, 0.42);
-      berry.rotation.set(0.35, 0.8, 1.15);
-      berry.scale.setScalar(0.85);
-      group.add(berry);
-    }
-
-    if (spec.lime) {
-      // Lime wheel slotted onto the rim.
-      const wheel = this.limeMesh();
-      const phi = -0.75;
-      const R = sideR(d, sideTop(d)) + 0.02;
-      wheel.position.set(Math.cos(phi) * R, d.h + 0.1, Math.sin(phi) * R);
-      wheel.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-Math.sin(phi), 0, Math.cos(phi)));
-      group.add(wheel);
+      // In a clear drink you can see the rest of the ice packed below the surface.
+      for (let i = 0; spec.clear && i < 14; i += 1) {
+        const y = 0.35 + (i / 14) * (shape.top - 0.6) + rand() * 0.1;
+        const a = rand() * Math.PI * 2;
+        const r = (sideR(d, y) - 0.3) * Math.sqrt(rand());
+        const cube = new THREE.Mesh(geos[i % geos.length], mat);
+        cube.scale.set(0.3 + rand() * 0.06, 0.27 + rand() * 0.06, 0.3 + rand() * 0.06);
+        cube.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+        cube.rotation.set(rand() * 3, rand() * 3, rand() * 3);
+        group.add(cube);
+      }
     }
 
     // The cup itself, with condensation below the drink line.
     const cold = spec.kind === 'empty' ? 0 : Math.min(shape.top, d.h - 0.2);
     group.add(new THREE.Mesh(geo, this.cupMaterial(d, cold)));
 
-    if (spec.straw && !shot) {
-      const radius = spec.pearls ? 0.12 : 0.07;
-      // Open cup: the straw stands from near the base and leans gently, well inside the rim.
-      const bottom = new THREE.Vector3(0.3, 0.22, 0.08);
-      const top = new THREE.Vector3(-0.2, d.h + 1.35, -0.04);
-      const dir = top.clone().sub(bottom);
-      const length = dir.length();
-      dir.normalize();
-      const strawGeo = new THREE.CylinderGeometry(radius, radius, length, 24, 1, true);
-      const strawMat = new THREE.MeshPhysicalMaterial({ color: spec.straw, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2, side: THREE.DoubleSide });
-      const straw = new THREE.Mesh(strawGeo, strawMat);
-      straw.position.copy(bottom).addScaledVector(dir, length / 2);
-      straw.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-      group.add(straw);
-    }
-
-    if ((spec.logo ?? !shot) && !shot) {
-      const mid = spec.colors[Math.floor(spec.colors.length / 2)] ?? '#ffffff';
-      const ink = spec.kind !== 'empty' && luminance(mid) < 0.3 ? 'light' : 'dark';
-      const map = await this.logo(ink);
+    if (spec.logo ?? !shot) {
+      const { material, aspect } = await this.printMaterial(d, cold, spec.kind === 'empty' || !!spec.clear);
+      const height = PRINT_WIDTH / aspect;
       const decal = new THREE.Mesh(
-        decalGeometry(d, 1.0, 2.05, 1.757 / sideR(d, 1.52)),
-        new THREE.MeshStandardMaterial({ map, transparent: true, roughness: 0.42, depthWrite: false }),
+        decalGeometry(d, PRINT_MID_Y - height / 2, PRINT_MID_Y + height / 2, PRINT_WIDTH / sideR(d, PRINT_MID_Y)),
+        material,
       );
       group.add(decal);
     }
 
     if (shot) {
-      group.scale.setScalar(2.2);
+      group.scale.setScalar(1.65);
       group.position.y = 1.05;
     }
     return group;

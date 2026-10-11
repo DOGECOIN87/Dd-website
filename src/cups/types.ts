@@ -16,19 +16,16 @@ export interface DrinkSpec {
   colors: string[];
   /** Spiral the colors around the cup instead of stacking them in layers. */
   swirl?: boolean;
-  /** Straw color. Omit for no straw. */
-  straw?: string;
   whip?: boolean;
   ice?: boolean;
-  strawberry?: boolean;
-  /** Lime wheel on the rim. */
-  lime?: boolean;
   pearls?: boolean;
   gummies?: boolean;
   /** Syrup or cream drizzled down the inside of the wall. */
   drizzle?: string;
   /** Surface detail painted into the drink. */
-  inclusions?: 'bubbles' | 'fruit' | 'specks' | 'seeds';
+  inclusions?: 'bubbles' | 'specks' | 'seeds';
+  /** A clear drink you can see through (water). */
+  clear?: boolean;
   /** Glossy set gelatin instead of a liquid (jello shots). */
   jello?: boolean;
   /** Print the Sip Society + Daiquiri depot logo on the cup. Defaults to true for tall cups. */

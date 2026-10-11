@@ -4,25 +4,20 @@ These files are business-provided assets.
 
 Brand:
 
-- `brand/sip-society-daiquiri-depot.svg` / `.webp`: the Sip Society + Daiquiri depot logo (vector and web raster). The SVG is also the print on the 3D cups.
-- `brand/sip-society-mark.svg`: the "NB Sip Society TX" mark on its own
-- `brand/daiquiri-depot-monogram.svg`: the red "dD" monogram
-- `brand/daiquiri-depot-logo.svg`: the "dD" monogram with "The Daiquiri depot / Frozen 2 Go" on a transparent background
-- `brand/daiquiri-depot-logo-on-red.svg`: the same lockup on its red background
+- `brand/sip-society-daiquiri-depot.webp`: the Sip Society + Daiquiri depot logo (navbar, footer, and the print on the 3D cups)
 - `brand/backyard-in-gruene.webp`: The Backyard in Gruene round guitar logo
 - `brand/now-in-2-locations.webp`: "Now in 2 locations" social graphic
 
 Photos:
 
-- `photos/fm306-drive-thru.webp`: the FM 306 storefront and drive-thru, color-corrected (FM 306 card)
+- `photos/layered-daiquiris.webp`: layered and swirled daiquiris at FM 306 (FM 306 card and social share image)
 - `photos/backyard-in-gruene-night.webp`: The Backyard in Gruene at night (Gruene card)
-- `photos/everything-sip-lineup.webp`: "Everything Sip, all in one stop" lineup poster (social share image)
-- `photos/everything-sip-wall.webp`: vertical crop of the lineup poster
 - `photos/jugs-and-jello-shots.webp`: half-gallon jugs with jello shots and gummy bears (not currently used)
-- `photos/layered-daiquiris.webp`: earlier FM 306 daiquiri photo (not currently used)
+
+Every photo on the site is a real photo of the business. Do not use AI-generated images. A real photo of the FM 306 storefront and drive-thru would be a good addition to the FM 306 card.
 
 Favicon and legacy monogram files are also here.
 
-Videos are not in `public/`. They live in `/media/video` for later use, so they are not deployed.
+Videos are not in `public/`. They live in `/media/video`, so they are not deployed. They are AI-generated ads and should not be put on the site as-is.
 
 Please replace the web-sized assets with full-resolution originals if they become available.

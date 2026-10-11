@@ -74,7 +74,7 @@ h2 { margin-bottom: 1rem; font-size: clamp(2.25rem, 4.5vw, 4rem); line-height: 1
 .announcement:hover { background: #2d3e4e; }
 .announcement-badge { border-radius: 999px; padding: .2rem .45rem; color: #fff; background: var(--pink); font-size: .64rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 
-/* Hero: the "Everything Sip" counter */
+/* Hero: the drink lineup counter */
 .hero-section { position: relative; overflow: hidden; padding-block: clamp(2.6rem, 5vw, 4.4rem) clamp(2.5rem, 5vw, 4rem); background: radial-gradient(120% 70% at 50% 0%, #fff 0%, #fbeef3 45%, #f6e4ea 100%); }
 .hero-glow { position: absolute; top: -18rem; left: 50%; width: 60rem; height: 36rem; border-radius: 50%; background: radial-gradient(closest-side, #ffc6dd99, transparent); transform: translateX(-50%); pointer-events: none; }
 .hero-inner { position: relative; z-index: 1; }

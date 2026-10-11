@@ -29,11 +29,12 @@ Menu cards show live prices from Toast when the site is deployed on Vercel with 
 
 ## 3D cups
 
-Every drink on the site is a live 3D model rendered with three.js (`src/cups/`), not an image. Cups sit still and spin in place while their card is hovered or focused. On touch screens, which have no hover, each cup spins while it is mostly on screen:
+Every drink on the site is a live 3D model rendered with three.js (`src/cups/`), not an image. Cups sit still with the print facing front and spin in place while their card is hovered or focused. When the pointer leaves, a cup finishes its turn and eases to a stop facing front. On touch screens, which have no hover, each cup spins while it is mostly on screen:
 
-- `geometry.ts` builds the open clear PET cup (push-up base, stacking foot, tapered wall, rolled rim), the drink volume, whipped cream and garnishes. Cups never have lids.
-- `textures.ts` paints the drink colours (layers, swirls, drizzle, pearls) and the condensation normal map at runtime, and prints the real logo from `public/brand/sip-society-daiquiri-depot.svg` (falling back to the `.webp`) on each cup, in cream ink on dark drinks.
-- `engine.ts` uses one shared WebGL renderer for the whole page and copies each cup into its own canvas. A still cup costs nothing after its first frame; only spinning cups render, at up to 30 fps. Visitors with reduced motion enabled always get a still cup.
+- `geometry.ts` builds the open clear PET cup (push-up base, stacking foot, tapered wall, rolled rim), the drink volume with its heaped frozen top, piped whipped cream, ice and gummy bears. Cups never have lids, straws or fruit garnishes.
+- `textures.ts` paints the drinks at runtime: layers with soft, wandering edges, hand-poured swirls whose bands drift and feather, creamy slush, drizzle, pearls and ice against the wall. It also paints the condensation (a fine mist on the plastic plus beads and run tracks that wipe it clear).
+- The print is the Sip Society + Daiquiri depot logo as a one-colour black print, `public/brand/cup-print.webp`. It is built from `public/brand/sip-society-daiquiri-depot.webp` by `scripts/build-cup-print.py`; rerun that if the logo changes.
+- `engine.ts` uses one shared WebGL renderer for the whole page and copies each cup into its own canvas. A still cup costs nothing after its first frame; only spinning cups render, at up to 60 fps (30 fps when several spin at once), and they always turn at the right speed even when a slow device draws fewer frames. Visitors with reduced motion enabled always get a still cup.
 - `src/components/RealCup.tsx` wires the spin to the nearest ancestor marked `data-cup-trigger` (a whole menu card or lineup item).
 - `src/data/drinks.ts` maps the hero lineup and each menu item to a cup. Menu flavours drive the colours automatically.
 
