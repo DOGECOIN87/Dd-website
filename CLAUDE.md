@@ -9,8 +9,10 @@ check tablet and phone widths and touch behaviour, not just desktop hover.
 
 - One cup design everywhere: the open, lidless clear 24 oz cup of the hero's first drink. Every item, party
   favors and empty cups included, uses it; only the contents change. No straws, no fruit garnishes.
-  Every drink fills the cup to the brim, as the frozen daiquiris do, and its cup is misted the same way
-  (`COLD_TOP` in `engine.ts`). The owner rejected cups with an empty band of plastic under the rim. Keep
+  Every drink fills the cup to the brim, as the frozen daiquiris do. The owner rejected cups with an empty
+  band of plastic under the rim. The frozen drinks' cups mist below `COLD_TOP` (`engine.ts`) with beads of
+  condensation; every other drink's cup looks like the water cup, as the owner asked: an even, smooth mist
+  up to the rim with no beads, so no speckles and no thick ring show at the top. Keep
   each drink's own contents (whipped cream, pearls, ice, drizzle): the owner said not to change them.
   Empty cups stay dry, since misted plastic makes them nearly invisible. Just three ice cubes float at the surface and
   never rise above the rim (iced drinks sit a little lower so the cubes show).

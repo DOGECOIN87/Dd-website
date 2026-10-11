@@ -295,8 +295,9 @@ export function liquidTexture(spec: DrinkSpec, wallTop: number, seed: number, vM
  * on it, densest in drifts, and the heavy ones have slid down leaving clear tracks.
  * Each bead and track wipes the mist away (low roughness), so the drink shows
  * through them crisply while the fogged wall softens it, as on a real iced cup.
+ * With `beads` off the wall is an even, smooth mist, as the water cup looks.
  */
-export function condensationMaps(cupHeight: number, coldTop: number, seed = 11) {
+export function condensationMaps(cupHeight: number, coldTop: number, seed = 11, beads = true) {
   const W = 1024;
   const H = 576;
   const height = new Float32Array(W * H);
@@ -327,22 +328,22 @@ export function condensationMaps(cupHeight: number, coldTop: number, seed = 11) 
       if (rand() < minDensity + (1 - minDensity) * drift(x, y) ** 2 * 2.2) return [x, y] as const;
     }
   };
-  for (let i = 0; i < 9000; i += 1) {
+  for (let i = 0; beads && i < 9000; i += 1) {
     const [x, y] = spot(0.15);
     const r = 0.7 + rand() * 0.9;
     bead(x, y, r, r, r * 0.55);
   }
-  for (let i = 0; i < 1500; i += 1) {
+  for (let i = 0; beads && i < 1500; i += 1) {
     const [x, y] = spot(0.1);
     const r = 1.6 + rand() * 1.8;
     bead(x, y, r, r * (0.95 + rand() * 0.15), r * 0.7);
   }
-  for (let i = 0; i < 230; i += 1) {
+  for (let i = 0; beads && i < 230; i += 1) {
     const [x, y] = spot(0.05);
     const r = 3.4 + rand() * 3;
     bead(x, y, r, r * (1.05 + rand() * 0.2), r * 0.7);
   }
-  for (let i = 0; i < 16; i += 1) {
+  for (let i = 0; beads && i < 16; i += 1) {
     // A heavy drop that has slid: a clear track behind it, a few droplets stranded along it.
     const x = rand() * W;
     const y = coldRow + 20 + rand() * (bottomRow - coldRow) * 0.55;

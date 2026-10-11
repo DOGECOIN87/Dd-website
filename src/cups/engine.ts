@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {
   LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceGeometry, liquidGeometry,
-  mulberry, sideR, whipGeometry,
+  mulberry, sideR, sideTop, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
 import { JUG_SCALE, loadJugs, type JugSize } from './jugs';
@@ -426,23 +426,23 @@ class CupEngine {
 
   // ---------------------------------------------------------------- building
 
-  /** Condensation maps for a cup whose drink line (cold area) ends at `coldTop`. */
-  private condensationFor(d: CupDims, coldTop: number) {
-    const id = `${d.h}:${coldTop.toFixed(2)}`;
+  /** Condensation maps for a cup whose drink line (cold area) ends at `coldTop`; `beads` off is an even mist. */
+  private condensationFor(d: CupDims, coldTop: number, beads: boolean) {
+    const id = `${d.h}:${coldTop.toFixed(2)}:${beads}`;
     let c = this.condensation.get(id);
     if (!c) {
-      c = condensationMaps(d.h, coldTop);
+      c = condensationMaps(d.h, coldTop, undefined, beads);
       this.condensation.set(id, c);
     }
     return c;
   }
 
   /** `coldTop` is the drink line; condensation only forms below it. 0 = a dry, empty cup. */
-  private cupMaterial(d: CupDims, coldTop: number) {
-    const id = `${d.h}:${coldTop.toFixed(2)}`;
+  private cupMaterial(d: CupDims, coldTop: number, beads = true) {
+    const id = `${d.h}:${coldTop.toFixed(2)}:${beads}`;
     let m = this.cupMat.get(id);
     if (!m) {
-      const wet = coldTop > 0 ? this.condensationFor(d, coldTop) : null;
+      const wet = coldTop > 0 ? this.condensationFor(d, coldTop, beads) : null;
       m = clearPlastic(new THREE.MeshPhysicalMaterial({
         color: '#ffffff', metalness: 0, transmission: 1, thickness: 0.2, ior: 1.57,
         roughness: wet ? 1 : 0.05, roughnessMap: wet?.roughness ?? null,
@@ -458,13 +458,13 @@ class CupEngine {
    * Black one-colour print, on the outside of the wall: under the same condensation
    * as the plastic around it. On a see-through cup it shows, reversed, through the back.
    */
-  private async printMaterial(d: CupDims, coldTop: number, seeThrough: boolean) {
-    const id = `${d.h}:${coldTop.toFixed(2)}:${seeThrough}`;
+  private async printMaterial(d: CupDims, coldTop: number, seeThrough: boolean, beads = true) {
+    const id = `${d.h}:${coldTop.toFixed(2)}:${seeThrough}:${beads}`;
     this.print ??= printTexture();
     const { map, aspect } = await this.print;
     let m = this.printMat.get(id);
     if (!m) {
-      const wet = coldTop > 0 ? this.condensationFor(d, coldTop) : null;
+      const wet = coldTop > 0 ? this.condensationFor(d, coldTop, beads) : null;
       const onPrint = (t: THREE.Texture) => {
         const c = t.clone();
         c.channel = 1;
@@ -694,13 +694,15 @@ class CupEngine {
       }
     }
 
-    // The cup itself: every drink's cup mists the same way as the frozen daiquiri's. An empty cup stays
-    // dry; the shot cup keeps the light mist it had before.
-    const cold = shot ? d.h * 0.7 : spec.kind === 'empty' ? 0 : COLD_TOP;
-    group.add(new THREE.Mesh(geo, this.cupMaterial(d, cold)));
+    // The cup itself. The frozen drinks' cups mist below `COLD_TOP` with beads of condensation. The other
+    // drinks' cups look like the water's: an even, smooth mist right up to the rim, no beads, so no clear
+    // band or speckles show at the top. An empty cup stays dry; the shot cup keeps the light mist it had before.
+    const beverage = !shot && spec.kind !== 'frozen' && spec.kind !== 'empty';
+    const cold = shot ? d.h * 0.7 : spec.kind === 'empty' ? 0 : beverage ? sideTop(d) : COLD_TOP;
+    group.add(new THREE.Mesh(geo, this.cupMaterial(d, cold, !beverage)));
 
     if (spec.logo ?? !shot) {
-      const { material, aspect } = await this.printMaterial(d, cold, spec.kind === 'empty' || !!spec.clear);
+      const { material, aspect } = await this.printMaterial(d, cold, spec.kind === 'empty' || !!spec.clear, !beverage);
       const height = PRINT_WIDTH / aspect;
       const decal = new THREE.Mesh(
         decalGeometry(d, PRINT_MID_Y - height / 2, PRINT_MID_Y + height / 2, PRINT_WIDTH / sideR(d, PRINT_MID_Y)),
