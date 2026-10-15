@@ -11,7 +11,7 @@ export function Hero() {
       <div className="shell hero-inner">
         <motion.div className="hero-intro" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <p className="eyebrow">Sip Society + Daiquiri Depot · New Braunfels</p>
-          <h1 id="hero-heading">Everything <em>sip.</em><br />All in one stop.</h1>
+          <h1 id="hero-heading">Everything <em>you crave.</em><br />All in one place.</h1>
           <p>Frozen daiquiris, gourmet coffee, boba, dirty sodas and smoothies. Now pouring at two New Braunfels spots, including our new Backyard in Gruene.</p>
           <div className="hero-actions">
             <a className="button button-pink" href={toast.orderUrl} target="_blank" rel="noreferrer">Order pickup <ArrowUpRight size={18} /></a>
