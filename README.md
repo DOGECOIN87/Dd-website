@@ -2,6 +2,17 @@
 
 Marketing site for Sip Society + Daiquiri Depot and The Backyard in Gruene, built with React, Vite, TypeScript, and Tailwind CSS.
 
+## Domains
+
+`https://daiquiri-depot.com` is the canonical public URL. The purchased aliases
+`daiquiri-depot.online`, `daquiridepot.online`, and `daquiridepot.com` are
+configured in `vercel.json` to permanently redirect to the canonical domain,
+including the original path and query string.
+
+Attach all four domains to the same Vercel project and configure their DNS at
+the registrar. Vercel manages TLS certificates after the domains are attached;
+the redirect rules only take effect once the aliases resolve to this project.
+
 ## Run locally
 
 ```bash

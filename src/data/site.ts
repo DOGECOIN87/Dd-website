@@ -4,6 +4,16 @@
 
 export const TOAST_SLUG = 'daiquiri-depot-new-braunfels-311-farm-to-market-road-306-suite-1a';
 
+/** Public domain policy. The remaining purchased domains redirect here. */
+export const siteDomains = {
+  primary: 'https://daiquiri-depot.com',
+  aliases: [
+    'https://daiquiri-depot.online',
+    'https://daquiridepot.online',
+    'https://daquiridepot.com',
+  ],
+} as const;
+
 export const toast = {
   /** Main Toast online-ordering page (pickup + delivery). */
   orderUrl: `https://order.toasttab.com/online/${TOAST_SLUG}`,
@@ -22,6 +32,7 @@ export const toast = {
 export const site = {
   name: 'Sip Society + Daiquiri Depot',
   shortName: 'Daiquiri Depot',
+  url: siteDomains.primary,
   city: 'New Braunfels, TX',
   phone: '(830) 632-5888',
   phoneHref: 'tel:+18306325888',

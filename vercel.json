@@ -1,0 +1,22 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "daiquiri-depot.online" }],
+      "destination": "https://daiquiri-depot.com/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "daquiridepot.online" }],
+      "destination": "https://daiquiri-depot.com/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "daquiridepot.com" }],
+      "destination": "https://daiquiri-depot.com/$1",
+      "permanent": true
+    }
+  ]
+}
