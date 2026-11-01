@@ -27,6 +27,7 @@ The local site runs at `http://localhost:3000`. Use `npm run lint` for a TypeScr
 - Update online-ordering URLs, contact details, social profiles, loyalty rewards, and ratings in `src/data/site.ts`.
 - Update both locations' addresses, published hours, features, and map coordinates in `src/data/locations.ts`. Hours are stored in Central time, with Sunday at index 0.
 - Update menu items, prices, flavors, and Toast item deep-link paths in `src/data/menu.ts`. Every menu order button uses that item's Toast link.
+- The link-preview image (`og:image` in `index.html`) is `public/share-preview.jpg`, a screenshot of the homepage hero on a desktop. After changing the hero, regenerate it: `npm run build`, `npx vite preview --port 4173`, then `node tools/share-shot.mjs` (needs Playwright). Facebook and Messenger cache previews; refresh one with Facebook's Sharing Debugger.
 
 Toast ordering deliberately opens on Toast rather than inside the site: Toast blocks framing with `X-Frame-Options`. It currently supports FM 306 only.
 
