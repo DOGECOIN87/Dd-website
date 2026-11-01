@@ -73,12 +73,28 @@ export function cupGeometry(d: CupDims) {
     const y = 0.06 + ((top - 0.06) * i) / steps;
     outer.push(V(sideR(d, y), y));
   }
-  const R = sideR(d, top);
-  outer.push(
-    V(R + 0.006, top + 0.022), V(R + 0.03, top + 0.046), V(R + 0.044, top + 0.07),
-    V(R + 0.036, top + 0.093), V(R + 0.014, h), V(R - 0.006, top + 0.09),
-  );
-  return lathe(shell(outer, d.wall), 128, 0, h);
+  // Rolled rim: a round bead sitting a little proud of the wall, modelled solid (one surface) so the
+  // see-through plastic never stacks two layers of itself there, which drew as stripes. Sampled finely
+  // so it shades as one smooth glossy bead.
+  const rb = d.h > 2 ? 0.024 : 0.017;
+  const cy = h - rb;
+  const cx = sideR(d, cy) + 0.2 * rb;
+  const yOut = cy - Math.sqrt(1 - 0.04) * rb; // where the outside of the wall meets the bead
+  for (let i = 1; i <= 6; i += 1) {
+    const y = top + ((yOut - top) * i) / 6;
+    outer.push(V(sideR(d, y), y));
+  }
+  const ring = shell(outer, d.wall);
+  const a0 = Math.atan2(yOut - cy, sideR(d, yOut) - cx);
+  // Round the bead's outside, over the top, to where it meets the inside of the wall.
+  const a1 = Math.PI * 2 - Math.acos(Math.max(-0.97, (sideR(d, cy) - d.wall - cx) / rb));
+  const bead: THREE.Vector2[] = [];
+  for (let i = 1; i < 48; i += 1) {
+    const a = a0 + ((a1 - a0) * i) / 48;
+    bead.push(V(cx + Math.cos(a) * rb, cy + Math.sin(a) * rb));
+  }
+  ring.splice(outer.length, 0, ...bead);
+  return lathe(ring, 192, 0, h);
 }
 
 /** Tall-cup texture height range; liquid textures map v = y / LIQUID_VMAX. */
@@ -171,20 +187,53 @@ export function liquidGeometry(d: CupDims, shape: LiquidShape, vMax = LIQUID_VMA
   return geo;
 }
 
-/** A slightly irregular ice cube: rounded edges, faces not quite flat. */
+/**
+ * A tray ice cube, part melted: softly rounded edges, slightly tapered sides, faces gently
+ * dished and wavy, the shallow dimple a tray leaves on top, never two the same.
+ */
 export function iceGeometry(seed: number) {
-  const geo = new RoundedBoxGeometry(1, 1, 1, 3, 0.18);
-  const rand = mulberry(seed);
+  const rand = mulberry(seed * 7 + 3);
+  const geo = new RoundedBoxGeometry(1, 1, 1, 5, 0.1 + rand() * 0.06);
   const pos = geo.attributes.position;
-  const bumps = Array.from({ length: 3 }, () => [rand() * 6, rand() * 6, rand() * 6, 2 + rand() * 3] as const);
+  const taper = 0.06 + rand() * 0.05;
+  const waves = Array.from({ length: 4 }, () => [rand() * 6, rand() * 6, rand() * 6, 2.5 + rand() * 4] as const);
+  const dent = 0.035 + rand() * 0.03;
+  for (let i = 0; i < pos.count; i += 1) {
+    let x = pos.getX(i);
+    let y = pos.getY(i);
+    let z = pos.getZ(i);
+    let n = 0;
+    for (const [a, b, c, f] of waves) n += Math.sin(f * x + a) * Math.sin(f * y + b) * Math.sin(f * z + c);
+    // Faces sag a touch toward their middles, as melting rounds off a cube.
+    const r2 = x * x + y * y + z * z;
+    const k = 1 + n * 0.022 - 0.035 * (1 - Math.min(1, r2 / 0.75));
+    x *= k;
+    y *= k;
+    z *= k;
+    const s = 1 + taper * y;
+    x *= s;
+    z *= s;
+    if (y > 0.3) y -= dent * Math.max(0, 1 - (x * x + z * z) / 0.16) * smooth(0.3, 0.48, y);
+    pos.setXYZ(i, x, y, z);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** The cloudy core frozen into the middle of a freezer cube: an irregular blob. */
+export function iceCoreGeometry(seed: number) {
+  const rand = mulberry(seed * 13 + 5);
+  const geo = new THREE.IcosahedronGeometry(1, 4);
+  const pos = geo.attributes.position;
+  const lobes = Array.from({ length: 3 }, () => [rand() * 6, rand() * 6, rand() * 6] as const);
   for (let i = 0; i < pos.count; i += 1) {
     const x = pos.getX(i);
     const y = pos.getY(i);
     const z = pos.getZ(i);
     let n = 0;
-    for (const [a, b, c, f] of bumps) n += Math.sin(f * x + a) * Math.sin(f * y + b) * Math.sin(f * z + c);
-    const k = 1 + n * 0.03;
-    pos.setXYZ(i, x * k, y * k, z * k);
+    for (const [a, b, c] of lobes) n += Math.sin(2 * x + a) * Math.sin(2 * y + b) * Math.sin(2 * z + c);
+    const k = 1 + n * 0.08;
+    pos.setXYZ(i, x * k * 0.3, y * k * 0.24, z * k * 0.3);
   }
   geo.computeVertexNormals();
   return geo;

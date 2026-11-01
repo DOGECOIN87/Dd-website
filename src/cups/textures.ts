@@ -203,28 +203,107 @@ export function liquidTexture(spec: DrinkSpec, wallTop: number, seed: number, vM
   const wrap = (draw: (dx: number) => void) => [-W, 0, W].forEach(draw);
 
   if (spec.ice && !frozen) {
-    // Cubes pressed against the wall show as paler, glassy blocks in the drink.
-    for (let i = 0; i < 18; i += 1) {
-      const x = rand() * W;
-      const y = surfaceY + 10 + Math.pow(rand(), 1.4) * (bottomY - surfaceY) * 0.7;
-      const size = 46 + rand() * 30;
-      const angle = (rand() - 0.5) * 0.9;
-      const alpha = 0.1 + rand() * 0.1;
+    // Cubes pressed against the wall: each face is a window onto the drink, lighter and a little
+    // brighter at its edges where the ice bends light, with a crisp glint on the lit edge, a soft
+    // dark refraction line on the far edge, a cloudy core and the odd fracture. Corners are
+    // irregular and softened, as on part-melted ice. Vertical texels are taller than horizontal
+    // ones (the texture wraps the cup), so shapes are squashed to stay square on the cup.
+    // Own random stream; the shared one skips ahead as the old cubes did, so the drizzle keeps its look.
+    const iceRand = mulberry(seed * 31 + 7);
+    for (let i = 0; i < 144; i += 1) rand();
+    const squash = (H / vMax) / (W / (Math.PI * 2 * 0.9));
+    const cubes = Array.from({ length: 20 }, () => ({
+      x: iceRand() * W,
+      y: surfaceY + 6 + Math.pow(iceRand(), 1.3) * (bottomY - surfaceY) * 0.72,
+      size: 44 + iceRand() * 34,
+      angle: (iceRand() - 0.5) * 1.1,
+      // Cubes further from the wall show fainter through the drink.
+      depth: iceRand(),
+      corners: Array.from({ length: 4 }, () => [(iceRand() - 0.5) * 0.16, (iceRand() - 0.5) * 0.16] as const),
+      round: 0.18 + iceRand() * 0.12,
+      core: [(iceRand() - 0.5) * 0.2, (iceRand() - 0.5) * 0.2, 0.18 + iceRand() * 0.14] as const,
+      cracks: Array.from({ length: iceRand() < 0.35 ? 1 : 0 }, () => [iceRand(), iceRand(), iceRand(), iceRand()] as const),
+    })).sort((p, q) => q.depth - p.depth);
+    for (const c of cubes) {
+      const half = c.size / 2;
+      const pts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v], k) => [(u + c.corners[k][0]) * half, (v + c.corners[k][1]) * half]);
+      const path = () => {
+        ctx.beginPath();
+        for (let k = 0; k < 4; k += 1) {
+          const p0 = pts[k];
+          const p1 = pts[(k + 1) % 4];
+          const p2 = pts[(k + 2) % 4];
+          const a = [p0[0] + (p1[0] - p0[0]) * (1 - c.round / 2), p0[1] + (p1[1] - p0[1]) * (1 - c.round / 2)];
+          const b2 = [p1[0] + (p2[0] - p1[0]) * (c.round / 2), p1[1] + (p2[1] - p1[1]) * (c.round / 2)];
+          if (k === 0) ctx.moveTo(p0[0] + (p1[0] - p0[0]) * (c.round / 2), p0[1] + (p1[1] - p0[1]) * (c.round / 2));
+          ctx.lineTo(a[0], a[1]);
+          ctx.quadraticCurveTo(p1[0], p1[1], b2[0], b2[1]);
+        }
+        ctx.closePath();
+      };
+      const vis = 1 - c.depth * 0.55;
       wrap((dx) => {
         ctx.save();
-        ctx.translate(x + dx, y);
-        ctx.rotate(angle);
-        ctx.scale(1, 0.8 + rand() * 0.3);
-        const g = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
-        g.addColorStop(0, `rgba(255,255,255,${alpha * 2.2})`);
-        g.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
-        g.addColorStop(1, `rgba(255,255,255,${alpha * 0.4})`);
-        ctx.fillStyle = g;
+        // Only below the surface line: rows above it map onto the meniscus, where they would smear.
         ctx.beginPath();
-        ctx.roundRect(-size / 2, -size / 2, size, size, size * 0.22);
-        ctx.fill();
-        ctx.strokeStyle = `rgba(255,255,255,${alpha * 2.4})`;
-        ctx.lineWidth = 2;
+        ctx.rect(-W, surfaceY + 3, W * 3, H);
+        ctx.clip();
+        ctx.translate(c.x + dx, c.y);
+        ctx.scale(1, squash);
+        ctx.rotate(c.angle);
+        path();
+        ctx.save();
+        ctx.clip();
+        // The face: lit from the upper left, the drink showing through.
+        const g = ctx.createLinearGradient(-half, -half, half, s);
+        g.addColorStop(0, `rgba(255,255,255,${0.2 * vis})`);
+        g.addColorStop(0.55, `rgba(255,255,255,${0.07 * vis})`);
+        g.addColorStop(1, `rgba(255,255,255,${0.03 * vis})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(-half * 1.3, -half * 1.3, half * 2.6, half * 2.6);
+        // Cloudy core.
+        const cg = ctx.createRadialGradient(c.core[0] * half, c.core[1] * half, 0, c.core[0] * half, c.core[1] * half, half * 0.75);
+        cg.addColorStop(0, `rgba(255,255,255,${c.core[2] * vis})`);
+        cg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = cg;
+        ctx.fillRect(-half * 1.3, -half * 1.3, half * 2.6, half * 2.6);
+        // Brighter band just inside the edge (light bent round the edge of the cube).
+        path();
+        ctx.lineWidth = half * 0.34;
+        ctx.strokeStyle = `rgba(255,255,255,${0.09 * vis})`;
+        ctx.stroke();
+        ctx.lineWidth = half * 0.12;
+        ctx.strokeStyle = `rgba(255,255,255,${0.1 * vis})`;
+        ctx.stroke();
+        // Soft dark refraction edge on the lower right, following the outline just inside it.
+        ctx.save();
+        ctx.scale(0.9, 0.9);
+        path();
+        const dg = ctx.createLinearGradient(half, half, 0, 0);
+        dg.addColorStop(0, `rgba(0,0,0,${0.12 * vis})`);
+        dg.addColorStop(0.6, 'rgba(0,0,0,0)');
+        ctx.strokeStyle = dg;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
+        // Fractures.
+        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = `rgba(255,255,255,${0.16 * vis})`;
+        for (const [a, b, e, f] of c.cracks) {
+          ctx.beginPath();
+          ctx.moveTo((a - 0.5) * half * 1.6, (b - 0.5) * half * 1.6);
+          ctx.quadraticCurveTo((e - 0.5) * half, (f - 0.5) * half, (b - 0.5) * half * 1.4, (e - 0.5) * half * 1.4);
+          ctx.stroke();
+        }
+        ctx.restore();
+        // Crisp glint along the lit upper left edge, following the outline just inside it.
+        ctx.scale(0.93, 0.93);
+        path();
+        const hg = ctx.createLinearGradient(-half, -half, 0, 0);
+        hg.addColorStop(0, `rgba(255,255,255,${0.6 * vis})`);
+        hg.addColorStop(0.55, 'rgba(255,255,255,0)');
+        ctx.strokeStyle = hg;
+        ctx.lineWidth = 1.4;
         ctx.stroke();
         ctx.restore();
       });
@@ -366,17 +445,6 @@ export function condensationMaps(cupHeight: number, coldTop: number, seed = 11, 
     }
     bead(x, y, r * 0.9, r * 1.15, r * 0.75);
   }
-  // Moulded fill-line rings near the top of a tall cup.
-  if (cupHeight > 2) {
-    for (const ringY of [2.42, 2.52]) {
-      const row = (1 - ringY / cupHeight) * H;
-      for (let y = Math.floor(row - 3); y <= Math.ceil(row + 3); y += 1) {
-        const k = Math.exp(-(((y - row) / 1.6) ** 2)) * 2.2;
-        for (let x = 0; x < W; x += 1) height[y * W + x] = Math.max(height[y * W + x], k);
-      }
-    }
-  }
-
   const normal = canvas(W, H);
   const rough = canvas(W, H);
   const nctx = normal.getContext('2d')!;
