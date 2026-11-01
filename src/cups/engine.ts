@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceGeometry, liquidGeometry,
+  LIQUID_VMAX, SHOT, TALL, cupGeometry, decalGeometry, gummyBearGeometry, iceCoreGeometry, iceGeometry, liquidGeometry,
   mulberry, sideR, sideTop, whipGeometry,
   type CupDims, type LiquidShape,
 } from './geometry';
@@ -221,7 +221,7 @@ class CupEngine {
   })();
   private readonly shadow: THREE.Mesh;
   private print?: Promise<{ map: THREE.Texture; aspect: number }>;
-  private ice?: { geos: THREE.BufferGeometry[]; mat: THREE.MeshPhysicalMaterial };
+  private ice?: { geos: THREE.BufferGeometry[]; cores: THREE.BufferGeometry[]; mat: THREE.MeshPhysicalMaterial; core: THREE.ShaderMaterial };
   private readonly jugMats = new Map<string, THREE.Material[]>();
 
   constructor() {
@@ -522,13 +522,44 @@ class CupEngine {
 
   private iceKit() {
     if (!this.ice) {
+      // Clear, glossy ice with a faint frosted skin; the white comes from the cloudy core inside each cube.
       const mat = clearPlastic(new THREE.MeshPhysicalMaterial({
-        color: '#ffffff', roughness: 0.14, transmission: 1, thickness: 0.35, ior: 1.31, envMapIntensity: 1.8,
-        normalMap: iceNormalMap(), normalScale: new THREE.Vector2(0.6, 0.6), transparent: true, depthWrite: false,
-      }), 0.45, 0.3, 0.6);
-      this.ice = { geos: [1, 2, 3, 4].map(iceGeometry), mat };
+        color: '#ffffff', roughness: 0.06, transmission: 1, thickness: 0.6, ior: 1.31, envMapIntensity: 2.2,
+        specularIntensity: 1, normalMap: iceNormalMap(), normalScale: new THREE.Vector2(0.35, 0.35),
+        transparent: true, depthWrite: false,
+      }), 0.26, 0.2, 0.6);
+      // A soft white haze, densest where you look through the most of it and fading to nothing at its edges.
+      const core = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        uniforms: { uOpacity: { value: 0.3 } },
+        vertexShader: `varying vec3 vN; varying vec3 vV;
+          void main() {
+            vec4 mv = modelViewMatrix * vec4( position, 1.0 );
+            vN = normalize( normalMatrix * normal );
+            vV = -mv.xyz;
+            gl_Position = projectionMatrix * mv;
+          }`,
+        fragmentShader: `uniform float uOpacity; varying vec3 vN; varying vec3 vV;
+          void main() {
+            float facing = abs( dot( normalize( vN ), normalize( vV ) ) );
+            gl_FragColor = vec4( 0.96, 0.98, 1.0, uOpacity * facing * facing * facing );
+          }`,
+      });
+      const ids = [1, 2, 3, 4, 5, 6];
+      this.ice = { geos: ids.map(iceGeometry), cores: ids.map(iceCoreGeometry), mat, core };
     }
     return this.ice;
+  }
+
+  /** One ice cube with its cloudy core. */
+  private iceCube(i: number) {
+    const { geos, cores, mat, core } = this.iceKit();
+    const cube = new THREE.Mesh(geos[i % geos.length], mat);
+    const cloud = new THREE.Mesh(cores[i % cores.length], core);
+    cloud.renderOrder = -1;
+    cube.add(cloud);
+    return cube;
   }
 
   /**
@@ -709,12 +740,11 @@ class CupEngine {
       // Iced water: a few cubes floating at the surface, loosely spread, each with its highest corner
       // just under the rim (never above it). A coloured drink fills its cup to the brim and would hide
       // floating cubes; its ice shows against the wall instead (liquidTexture).
-      const { geos, mat } = this.iceKit();
       const box = new THREE.Box3();
       for (let i = 0; i < 3; i += 1) {
         const a = (i / 3) * Math.PI * 2 + (rand() - 0.5) * 0.6;
         const r = 0.42 + rand() * 0.16;
-        const cube = new THREE.Mesh(geos[i % geos.length], mat);
+        const cube = this.iceCube(i);
         cube.scale.set(0.3 + rand() * 0.07, 0.27 + rand() * 0.07, 0.3 + rand() * 0.07);
         cube.rotation.set((rand() - 0.5) * 0.5, rand() * 3, (rand() - 0.5) * 0.5);
         cube.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
@@ -727,7 +757,7 @@ class CupEngine {
         const y = 0.35 + (i / 14) * (shape.top - 0.6) + rand() * 0.1;
         const a = rand() * Math.PI * 2;
         const r = (sideR(d, y) - 0.3) * Math.sqrt(rand());
-        const cube = new THREE.Mesh(geos[i % geos.length], mat);
+        const cube = this.iceCube(i + 3);
         cube.scale.set(0.3 + rand() * 0.06, 0.27 + rand() * 0.06, 0.3 + rand() * 0.06);
         cube.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
         cube.rotation.set(rand() * 3, rand() * 3, rand() * 3);
