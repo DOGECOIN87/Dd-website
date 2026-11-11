@@ -5,7 +5,7 @@ export type DayHours = { open: string; close: string } | null;
 /** Index 0 = Sunday … 6 = Saturday. `null` = hours not published. */
 export type WeeklyHours = [DayHours, DayHours, DayHours, DayHours, DayHours, DayHours, DayHours] | null;
 
-export type LocationId = 'fm306' | 'gruene';
+export type LocationId = 'fm306' | 'gruene' | 'hwy46';
 
 export interface Location {
   id: LocationId;
@@ -81,6 +81,28 @@ export const locations: Location[] = [
     serves: ['Frozen daiquiris', 'Beer', 'Wine', 'Dirty sodas', 'Small bites & treats'],
     links: [{ label: 'Facebook', href: 'https://www.facebook.com/p/The-Backyard-in-Gruene-61581658604585/' }],
     theme: 'yard',
+    isNew: true,
+  },
+  {
+    id: 'hwy46',
+    name: 'Sip Society - Daiquiri Depot',
+    nickname: 'Hwy 46',
+    area: 'Highway 46, toward Seguin',
+    tagline: 'Our newest spot, on Highway 46 heading toward Seguin. The same daiquiris, boba, dirty sodas and coffee on the east side of town.',
+    bestFor: 'Drink runs on the east side of New Braunfels and the Seguin side of Highway 46.',
+    address: { street: '857 S Hwy 46', city: 'New Braunfels', region: 'TX', zip: '78130' },
+    coords: { lat: 29.69029, lng: -98.07438 },
+    phone: site.phone,
+    phoneHref: site.phoneHref,
+    hours: null,
+    hoursNote: 'New location — hours may vary while we get rolling. Check Facebook or give us a call for the latest.',
+    features: ['Daiquiris to go', 'Takeout', 'East side'],
+    serves: ['Frozen daiquiris', 'Coffee & espresso', 'Boba', 'Dirty sodas', 'Smoothies'],
+    links: [
+      { label: 'Facebook', href: site.socials.facebook },
+      { label: 'Instagram', href: site.socials.instagram },
+    ],
+    theme: 'sip',
     isNew: true,
   },
 ];

@@ -13,7 +13,7 @@ export function Navbar() {
   return (
     <header className="site-nav">
       <a className="announcement" href="#locations">
-        <span className="announcement-badge">New</span> Now in 2 locations: The Backyard in Gruene is open at 1706 Hunter Rd <span aria-hidden="true">→</span>
+        <span className="announcement-badge">New</span> Now in 3 locations: our newest spot is open at 857 S Hwy 46 <span aria-hidden="true">→</span>
       </a>
       <div className="shell nav-row">
         <a className="brand-mark" href="#top" aria-label="Sip Society and Daiquiri Depot home">

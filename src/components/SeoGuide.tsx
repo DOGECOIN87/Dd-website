@@ -29,6 +29,11 @@ const guideLinks = [
     title: 'The Backyard in Gruene',
     detail: 'Turf lawn, live music and daiquiris at 1706 Hunter Rd.',
   },
+  {
+    href: '/locations/hwy-46/',
+    title: 'Now Open on Highway 46',
+    detail: 'Sip Society - Daiquiri Depot at 857 S Hwy 46 — our newest spot, toward Seguin.',
+  },
 ];
 
 const faqs = [
@@ -46,11 +51,11 @@ const faqs = [
   },
   {
     q: 'Where are you located?',
-    a: 'Two New Braunfels spots: the drive-thru at 311 FM 306, Suite 1A, and The Backyard in Gruene at 1706 Hunter Rd.',
+    a: 'Three New Braunfels spots: the drive-thru at 311 FM 306, Suite 1A; The Backyard in Gruene at 1706 Hunter Rd; and Sip Society - Daiquiri Depot at 857 S Hwy 46, toward Seguin.',
   },
   {
     q: 'What are your hours?',
-    a: "The FM 306 drive-thru is open Sunday–Thursday 9 AM–9 PM and Friday–Saturday 9 AM–10 PM. The Backyard in Gruene's hours change with live music and events — check Facebook or call (830) 632-5888.",
+    a: "The FM 306 drive-thru is open Sunday–Thursday 9 AM–9 PM and Friday–Saturday 9 AM–10 PM. The Backyard in Gruene's hours change with live music and events, and the Highway 46 location is new, so its hours may vary — check Facebook or call (830) 632-5888.",
   },
   {
     q: 'Do you have non-alcoholic drinks?',

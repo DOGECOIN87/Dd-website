@@ -111,6 +111,8 @@ h2 { margin-bottom: 1rem; font-size: clamp(2.25rem, 4.5vw, 4rem); line-height: 1
 .location-card.sip { color: var(--ink); background: var(--cream); }
 .location-card.yard { color: var(--cream); background: var(--indigo); }
 .location-art { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #f3e6ec; }
+.location-art-text { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #C42A6C, #7a1c46); }
+.location-art-text span { color: #fff; font-family: "Anton", "DM Sans", sans-serif; font-size: clamp(1.4rem, 2.6vw, 2rem); letter-spacing: .04em; text-transform: uppercase; text-align: center; padding: 0 1rem; }
 .location-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .sip .location-art img { object-position: 50% 50%; }
 .yard .location-art { background: #120d2a; }

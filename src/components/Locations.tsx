@@ -18,10 +18,17 @@ function LocationArt({ location }: { location: Location }) {
   if (location.id === 'fm306') {
     return <div className="location-art"><img src="/photos/fm306-drive-thru.webp" alt="" /></div>;
   }
+  if (location.id === 'gruene') {
+    return (
+      <div className="location-art">
+        <img src="/photos/backyard-in-gruene-night.webp" alt="" />
+        <img className="location-badge" src="/brand/backyard-in-gruene.webp" alt="" />
+      </div>
+    );
+  }
   return (
-    <div className="location-art">
-      <img src="/photos/backyard-in-gruene-night.webp" alt="" />
-      <img className="location-badge" src="/brand/backyard-in-gruene.webp" alt="" />
+    <div className="location-art location-art-text">
+      <span>Now open on Highway 46</span>
     </div>
   );
 }
@@ -49,7 +56,7 @@ function LocationCard({ location, distance, closest, now }: { location: Location
         <p className="best-for"><Sparkles size={16} /> <strong>Best for:</strong> {location.bestFor}</p>
         {distance !== undefined && <p className="distance"><Compass size={16} /> {distance.toFixed(1)} miles away as the crow flies</p>}
         <div className="card-actions">
-          {isDepot ? <a className="button button-light" href={location.orderUrl} target="_blank" rel="noreferrer">Order ahead ↗</a> : <a className="button button-yard-light" href={directionsUrl(location)} target="_blank" rel="noreferrer"><MapPin size={17} /> Directions</a>}
+          {isDepot ? <a className="button button-light" href={location.orderUrl} target="_blank" rel="noreferrer">Order ahead ↗</a> : <a className={`button ${location.theme === 'yard' ? 'button-yard-light' : 'button-light'}`} href={directionsUrl(location)} target="_blank" rel="noreferrer"><MapPin size={17} /> Directions</a>}
           {isDepot ? <a className="text-link" href={directionsUrl(location)} target="_blank" rel="noreferrer">Directions <span>→</span></a> : <a className="text-link" href={facebook} target="_blank" rel="noreferrer">What’s on <span>→</span></a>}
         </div>
       </div>
@@ -62,8 +69,8 @@ export function Locations() {
   const [distances, setDistances] = useState<Partial<Record<LocationId, number>>>({});
   const [geoMessage, setGeoMessage] = useState('');
   const [locating, setLocating] = useState(false);
-  const closest = Object.entries(distances).length === 2
-    ? (distances.fm306! <= distances.gruene! ? 'fm306' : 'gruene')
+  const closest = Object.keys(distances).length > 0
+    ? (Object.entries(distances) as [LocationId, number][]).reduce((a, b) => (b[1] < a[1] ? b : a))[0]
     : undefined;
 
   const findClosest = () => {
@@ -90,9 +97,9 @@ export function Locations() {
     <section id="locations" className="locations-section section-pad" aria-labelledby="locations-heading">
       <div className="shell">
         <div className="section-heading locations-heading">
-          <p className="now-two">Now in 2 locations</p>
+          <p className="now-two">Now in 3 locations</p>
           <h2 id="locations-heading">Where are we <em>sipping</em> today?</h2>
-          <p>Grab-and-go at the original FM 306 drive-thru, or kick back on the turf at our new Backyard in Gruene.</p>
+          <p>Grab-and-go at the original FM 306 drive-thru, kick back on the turf at The Backyard in Gruene, or hit our newest spot on Highway 46 toward Seguin.</p>
         </div>
         <div className="location-grid">
           {locations.map((location) => <LocationCard key={location.id} location={location} now={now} distance={distances[location.id]} closest={closest === location.id} />)}

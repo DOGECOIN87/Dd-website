@@ -12,10 +12,10 @@ export function Hero() {
         <motion.div className="hero-intro" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <p className="eyebrow">Sip Society + Daiquiri Depot · New Braunfels</p>
           <h1 id="hero-heading">Everything <em>you crave.</em><br />All in one place.</h1>
-          <p>Frozen daiquiris, gourmet coffee, boba, dirty sodas and smoothies. Now pouring at two New Braunfels spots, including our new Backyard in Gruene.</p>
+          <p>Frozen daiquiris, gourmet coffee, boba, dirty sodas and smoothies. Now pouring at three New Braunfels spots, including our newest on Highway 46.</p>
           <div className="hero-actions">
             <a className="button button-pink" href={toast.orderUrl} target="_blank" rel="noreferrer">Order pickup <ArrowUpRight size={18} /></a>
-            <a className="button button-ghost" href="#locations">See both locations <ArrowDown size={18} /></a>
+            <a className="button button-ghost" href="#locations">See all locations <ArrowDown size={18} /></a>
           </div>
         </motion.div>
         <ul className="lineup" aria-label="What we pour">
