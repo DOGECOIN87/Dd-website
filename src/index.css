@@ -285,7 +285,7 @@ blockquote cite { color: #5a686b; font-size: .85rem; font-style: normal; font-we
 
 /* Footer */
 .site-footer { padding-top: 3.5rem; color: #e6ece8; background: var(--ink); }
-.footer-grid { display: grid; grid-template-columns: 1.15fr 1.1fr .9fr; gap: 2rem; padding-bottom: 3rem; }
+.footer-grid { display: grid; grid-template-columns: 1.15fr 1.1fr .85fr .9fr; gap: 2rem; padding-bottom: 3rem; }
 .footer-logo { width: 175px; height: 90px; margin-bottom: .75rem; object-fit: contain; object-position: left center; filter: brightness(0) invert(1); }
 .footer-grid p { color: #c0cbc5; font-size: .84rem; line-height: 1.5; }
 .footer-grid h2 { margin-bottom: .9rem; color: var(--gold); font-family: "DM Sans", sans-serif; font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
@@ -361,3 +361,18 @@ blockquote cite { color: #5a686b; font-size: .85rem; font-style: normal; font-we
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* SEO guide + FAQ (added 2026-11-11) */
+.seo-guide { background: var(--blush); }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 3rem; }
+.guide-card { display: block; padding: 1.25rem 1.4rem; border: 1px solid var(--line); border-radius: 16px; background: #fff; text-decoration: none; }
+.guide-card h3 { margin-bottom: .4rem; font-size: 1.25rem; }
+.guide-card p { margin-bottom: .6rem; color: #5a6165; font-size: .95rem; line-height: 1.55; }
+.guide-card span { color: var(--pink); font-size: .85rem; font-weight: 800; }
+.guide-card:hover { border-color: var(--pink); }
+.faq-block { max-width: 760px; }
+.faq-item { padding-block: 1rem; border-top: 1px solid var(--line); }
+.faq-item h3 { margin-bottom: .35rem; font-size: 1.15rem; }
+.faq-item p { margin-bottom: 0; color: #5a6165; line-height: 1.6; }
+.footer-explore a { display: block; margin-bottom: .6rem; color: #d9e1dc; font-size: .84rem; text-decoration: none; }
+.footer-explore a:hover { color: var(--gold); }

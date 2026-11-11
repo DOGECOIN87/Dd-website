@@ -9,6 +9,7 @@ import { Menu } from './components/Menu';
 import { Navbar } from './components/Navbar';
 import { OrderBand } from './components/OrderBand';
 import { Quiz } from './components/Quiz';
+import { SeoGuide } from './components/SeoGuide';
 import { SipBar } from './components/SipBar';
 import { Visit } from './components/Visit';
 
@@ -26,6 +27,7 @@ export default function App() {
           <SipBar />
           <OrderBand />
           <About />
+          <SeoGuide />
           <Visit />
         </main>
         <Footer />
